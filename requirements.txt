@@ -1,0 +1,22 @@
+# LedgerMind Dependencies
+
+# Vector Database
+chromadb>=0.4.22
+
+# Embeddings
+sentence-transformers>=2.2.2
+
+# PDF Processing
+pypdf>=3.17.0
+pdfplumber>=0.10.0
+
+# LLM (will be installed when needed in Step 1.6)
+# Uncomment these when you reach Step 1.6:
+# transformers>=4.36.0
+# torch>=2.1.0
+# accelerate>=0.25.0
+# bitsandbytes>=0.41.0
+
+# Utilities
+numpy>=1.24.0
+
