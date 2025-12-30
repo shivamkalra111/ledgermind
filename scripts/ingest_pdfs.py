@@ -115,15 +115,30 @@ class GSTProcessor:
         print("GST PDF Processor - Optimized for Legal/Financial Documents")
         print("="*70)
         
+        # Initialize embedding function FIRST (needed for collection)
+        print("\n[1/3] Loading embedding model...")
+        print("   Model: bge-large-en-v1.5 (optimized for formal text)")
+        print("   First run: Downloads ~1.3 GB (takes 3-5 minutes)")
+        
+        from chromadb.utils import embedding_functions
+        self.embedding_function = embedding_functions.SentenceTransformerEmbeddingFunction(
+            model_name="BAAI/bge-large-en-v1.5"
+        )
+        print(f"   ✅ Embedding model loaded (1024 dimensions)")
+        
         # Initialize ChromaDB
-        print("\n[1/3] Initializing ChromaDB...")
-        self.client = chromadb.Client(Settings(
-            anonymized_telemetry=False
-        ))
+        print("\n[2/3] Initializing ChromaDB...")
+        self.client = chromadb.PersistentClient(
+            path="./chroma_db",
+            settings=Settings(anonymized_telemetry=False)
+        )
         
         # Create or get collection
         try:
-            self.collection = self.client.get_collection("gst_rules")
+            self.collection = self.client.get_collection(
+                name="gst_rules",
+                embedding_function=self.embedding_function  # MUST specify for queries!
+            )
             count = self.collection.count()
             print(f"   ✅ Existing collection loaded ({count} documents)")
             
@@ -139,31 +154,26 @@ class GSTProcessor:
                     self.client.delete_collection("gst_rules")
                     self.collection = self.client.create_collection(
                         name="gst_rules",
+                        embedding_function=self.embedding_function,  # Specify embedding function!
                         metadata={"description": "GST rules from official PDFs"}
                     )
                     print("   ✅ Collection cleared and recreated")
         except:
             self.collection = self.client.create_collection(
                 name="gst_rules",
+                embedding_function=self.embedding_function,  # Specify embedding function!
                 metadata={"description": "GST rules from official PDFs"}
             )
             print("   ✅ New collection created")
         
-        # Initialize embedding model (bge-large for better accuracy)
-        print("\n[2/3] Loading embedding model...")
-        print("   Model: bge-large-en-v1.5 (optimized for formal text)")
-        print("   First run: Downloads ~1.3 GB (takes 3-5 minutes)")
-        self.embedder = SentenceTransformer('BAAI/bge-large-en-v1.5')
-        embedding_dim = self.embedder.get_sentence_embedding_dimension()
-        print(f"   ✅ Embedding model loaded ({embedding_dim} dimensions)")
-        
         # Initialize semantic chunker
+        print("\n[3/3] Initializing semantic chunker...")
         self.chunker = SemanticChunker(
             max_chunk_size=1200,   # Larger for complete concepts
             min_chunk_size=200     # Minimum meaningful size
         )
         
-        print("\n[3/3] Ready to process PDFs!")
+        print("   ✅ Ready to process PDFs!")
         print(f"   Chunking: Semantic (preserves sections/rules)")
         print(f"   Max chunk size: 1200 chars")
     
@@ -224,43 +234,42 @@ class GSTProcessor:
             print(f"     Size: {len(sample['text'])} chars")
             print(f"     Preview: {sample['text'][:150]}...")
         
-        # Step 3: Create embeddings
-        print(f"\n  [Step 3/4] Creating embeddings with bge-large...")
-        print(f"  (Converting {len(all_chunks)} chunks to 1024-dim vectors)")
+        # Step 3: Prepare data for ChromaDB
+        print(f"\n  [Step 3/4] Preparing data for ChromaDB...")
         
-        chunk_texts = [chunk['text'] for chunk in all_chunks]
-        embeddings = self.embedder.encode(
-            chunk_texts,
-            show_progress_bar=True,
-            batch_size=16,  # Lower batch for large model
-            convert_to_numpy=True
-        )
-        
-        print(f"  ✅ Created {len(embeddings)} embeddings")
-        print(f"     Dimension: {embeddings.shape[1]} (higher = better accuracy)")
-        
-        # Step 4: Store in ChromaDB
-        print(f"\n  [Step 4/4] Storing in ChromaDB...")
-        
-        # Prepare data
+        # Prepare data (ChromaDB will handle embeddings automatically)
         ids = []
         documents = []
         metadatas = []
-        embeddings_list = []
         
-        for i, (chunk, embedding) in enumerate(zip(all_chunks, embeddings)):
+        for i, chunk in enumerate(all_chunks):
             chunk_id = f"{pdf_name.replace('.pdf', '')}_{i}"
             ids.append(chunk_id)
             documents.append(chunk['text'])
-            metadatas.append(chunk['metadata'])
-            embeddings_list.append(embedding.tolist())
+            
+            # Clean metadata: ChromaDB doesn't accept None values
+            clean_metadata = {}
+            for key, value in chunk['metadata'].items():
+                if value is not None:
+                    clean_metadata[key] = value
+                else:
+                    # Convert None to empty string for section_id
+                    clean_metadata[key] = "" if key == 'section_id' else 0
+            
+            metadatas.append(clean_metadata)
         
-        # Add to ChromaDB
+        print(f"  ✅ Prepared {len(ids)} chunks for embedding")
+        
+        # Step 4: Store in ChromaDB (embeddings created automatically)
+        print(f"\n  [Step 4/4] Storing in ChromaDB...")
+        print(f"  (ChromaDB will create {len(documents)} embeddings with bge-large)")
+        
+        # Add to ChromaDB - it will use the embedding_function we specified
         self.collection.add(
             ids=ids,
             documents=documents,
-            metadatas=metadatas,
-            embeddings=embeddings_list
+            metadatas=metadatas
+            # Note: No embeddings parameter! ChromaDB handles this automatically
         )
         
         print(f"  ✅ Stored {len(ids)} chunks")
