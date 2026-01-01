@@ -4,72 +4,248 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Status: Phase 1 Complete](https://img.shields.io/badge/status-Phase%201%20Complete-green.svg)]()
 
-> An open-source AI assistant that answers GST compliance questions using RAG (Retrieval-Augmented Generation) with local LLMs. No API costs, complete data privacy, grounded in official GST documents.
+> Building towards a Tally-like accounting software with intelligent LLM assistance. Currently: Production-ready GST compliance Q&A assistant using RAG with local LLMs.
 
 ---
 
-## 🎯 Current Focus
+## 🎯 Vision & Current Focus
 
-Building a **production-ready LLM assistant** for Indian GST compliance that can accurately answer questions like:
-- "What is the time limit to claim Input Tax Credit?"
-- "How to file GSTR-1?"
-- "What is reverse charge mechanism?"
+**Long-term Vision:** Full accounting software (like Tally) with integrated AI that can:
+- Answer compliance questions naturally
+- Analyze your accounting data
+- Validate transactions against rules
+- Auto-fill forms and generate reports
+- Provide intelligent recommendations
 
-Future vision: Full Tally-like accounting software with integrated AI assistance.
+**Current Focus (Phase 1):** Build and perfect the **LLM Assistant foundation**
+- ✅ RAG-powered GST Q&A system
+- 🔄 Optimize to >85% accuracy
+- 📊 Validate with comprehensive testing
 
-## ✨ Features (Working Now)
+**Why This Order?** Master the AI/RAG layer first before adding accounting complexity. A bad LLM assistant on top of accounting data = bad product. A great LLM assistant = solid foundation for future features.
 
-- 🗣️ **Natural Language Q&A**: Ask GST questions in plain English
-- 🔍 **RAG-Powered**: Retrieves relevant sections from official GST documents
-- ✅ **Grounded Answers**: Responses cite sources (document + page numbers)
-- 📊 **Performance Metrics**: Tracks confidence, faithfulness, relevance
-- 🔒 **100% Local**: No API calls, complete data privacy
-- 🧪 **Automated Testing**: 50-question test suite with evaluation
+---
 
-## 🏗️ Architecture
+## 🚀 What Works Right Now
 
+```bash
+$ python main.py "What is Input Tax Credit?"
+
+Answer: Input Tax Credit (ITC) is the tax paid on purchases which can 
+be set off against the tax payable on sales. To claim ITC, you must:
+1. Possess a valid tax invoice
+2. Have received the goods/services
+3. Tax must be paid to the government
+4. Returns must be filed [Source: CGST Act, Section 16, Page 42]
+
+Confidence: 62% | Faithfulness: 88% | Time: 2.3s
 ```
-User Question
-      ↓
-Query Expansion (GST abbreviations)
-      ↓
-Vector Search (ChromaDB)
-  • 855+ document chunks
-  • bge-large-en-v1.5 embeddings
-  • Semantic + metadata filtering
-      ↓
-Top-K Retrieval (5-7 chunks)
-  • Min similarity: 0.25
-  • With source metadata
-      ↓
-LLM Generation (Qwen2.5-7B-Instruct)
-  • Context-aware reasoning
-  • Forced citation
-  • Temperature: 0.3 (conservative)
-      ↓
-Post-processing
-  • Faithfulness scoring
-  • Relevance scoring
-  • Source formatting
-      ↓
-JSON Response + Metrics
+
+**Features:**
+- 🗣️ Natural language GST questions
+- 🔍 Retrieves from official documents (294 pages, 855 chunks)
+- ✅ Cites sources (document + page)
+- 📊 Tracks performance metrics
+- 🔒 100% local, no API costs
+- 🧪 50-question automated test suite
+
+---
+
+## 🗺️ Development Roadmap
+
+### ✅ **Phase 1: LLM Assistant Core** (COMPLETE)
+**Goal:** Build reliable GST Q&A system  
+**Status:** Functional, needs optimization (60-75% pass rate → target 85%)
+
+**Completed:**
+- [x] RAG pipeline with ChromaDB
+- [x] Local LLM (Qwen2.5-7B via Ollama)
+- [x] 294 pages GST documents ingested
+- [x] Semantic chunking (structure-aware)
+- [x] Metrics system (confidence, faithfulness, relevance)
+- [x] 50-question test suite
+- [x] Document coverage verification (88%)
+
+**Current Work (Week 1-2):**
+- [ ] Optimize response time (18s → <5s)
+- [ ] Improve system prompt (reduce verbosity)
+- [ ] Tune retrieval parameters
+- [ ] Reach >85% pass rate
+- [ ] Collect human feedback
+
+---
+
+### 🔄 **Phase 2: Accounting Data Layer** (NEXT - Month 2-3)
+**Goal:** Add accounting database so LLM can analyze YOUR data
+
+**What We'll Build:**
 ```
+Current:  User asks "What is ITC?" → LLM answers from rules
+Next:     User asks "What's my ITC this month?" → LLM queries YOUR data + rules
+```
+
+**Components:**
+1. **Database Schema**
+   - Customers, Vendors, Products
+   - Invoices (sales/purchase)
+   - Transactions, Ledgers
+   - GST-specific fields (GSTIN, HSN, tax rates)
+
+2. **API Layer**
+   ```python
+   # Simple functions LLM can use
+   get_monthly_itc(month) → Returns ITC summary
+   get_invoice(id) → Returns invoice details
+   check_supplier_compliance(supplier_id) → Check if filed GSTR
+   ```
+
+3. **LLM Integration**
+   ```python
+   # LLM can now answer data-specific questions
+   Q: "Why is my ITC only 50k this month?"
+   → LLM calls get_monthly_itc()
+   → Finds supplier ABC hasn't filed GSTR-1
+   → Explains with rule: Section 16(2) - ITC blocked
+   ```
+
+**Timeline:** 2-3 months  
+**Complexity:** Medium (standard CRUD + SQL)
+
+---
+
+### 🎯 **Phase 3: Function Calling / Tool Use** (Month 4-5)
+**Goal:** LLM can perform actions, not just answer questions
+
+**Architecture Decision:** **Function Calling (NOT Agentic System)**
+
+**Why Function Calling?**
+- ✅ Simpler to build and maintain
+- ✅ More predictable and debuggable
+- ✅ LLM stays in control
+- ✅ Sufficient for 80% of accounting tasks
+- ✅ Natively supported by Qwen2.5
+
+**What We'll Build:**
+```python
+# Define tools LLM can use
+tools = [
+    "get_itc_summary(month)",
+    "create_invoice(customer, items, amount)",
+    "validate_transaction(transaction_id)",
+    "check_gst_compliance(period)",
+    "generate_gstr1(month)"
+]
+
+# Example interaction:
+User: "Create invoice for ABC Corp, 100k software services, Maharashtra"
+
+LLM thinks:
+  1. Software services → HSN 998314
+  2. Maharashtra (intrastate) → CGST 9% + SGST 9%
+  3. Need: Customer ID, calculate tax
+  
+LLM calls: create_invoice({
+    customer: "ABC Corp",
+    items: [{name: "Software", hsn: "998314", amount: 100000}],
+    cgst: 9000, sgst: 9000,
+    place_of_supply: "Maharashtra"
+})
+
+Result: Invoice #INV-001 created ✅
+```
+
+**Timeline:** 1-2 months  
+**Complexity:** Medium
+
+---
+
+### 🏗️ **Phase 4: Web UI & Polish** (Month 6-7)
+**Goal:** Make it usable for end users
+
+**Components:**
+- Web interface (Streamlit or FastAPI + React)
+- Dashboard (revenue, GST liability, ITC summary)
+- Forms (invoice creation, transaction entry)
+- Reports (GSTR-1, P&L, Balance Sheet)
+- User feedback system
+
+---
+
+### 🚀 **Phase 5: Advanced Features** (Month 8+)
+**Only if needed:**
+- Multi-company support
+- Inventory management
+- E-invoicing integration
+- Banking integration
+- Mobile app
+- **Agentic workflows** (for very complex multi-step tasks)
+
+---
+
+## 🤔 Why NOT Agentic System (Yet)?
+
+**What are Agents?**
+- Multiple AI "agents" that communicate
+- Each has specialized role
+- Autonomous decision-making
+- Complex orchestration
+
+**Why NOT now:**
+1. **Don't have accounting data yet** - Agents need data to analyze
+2. **Overkill for most tasks** - Accounting is mostly deterministic
+3. **Harder to debug** - Multiple agents = complex interactions
+4. **Function calling is enough** - Covers 80% of use cases
+
+**When Agents Make Sense:**
+- Complex multi-step workflows (GST audit preparation)
+- Uncertain number of steps
+- Multiple specialized domains
+- Exploratory analysis
+
+**Our Approach:** Start simple (functions), add agents only if genuinely needed.
+
+---
 
 ## 🛠️ Tech Stack
 
 | Component | Technology | Why? |
 |-----------|-----------|------|
-| **LLM** | Qwen2.5-7B-Instruct (via Ollama) | Best reasoning for legal text |
-| **Embeddings** | bge-large-en-v1.5 (1024-dim) | Optimized for formal documents |
-| **Vector DB** | ChromaDB (persistent) | Fast, lightweight, local |
-| **Chunking** | Semantic (structure-aware) | Preserves legal context |
-| **Framework** | Python 3.8+ | Simple, maintainable |
+| **LLM** | Qwen2.5-7B-Instruct (Ollama) | Best reasoning, function calling support |
+| **Embeddings** | bge-large-en-v1.5 (1024-dim) | Optimized for legal/formal text |
+| **Vector DB** | ChromaDB (persistent) | Fast, local, simple |
+| **Database** | PostgreSQL (future) | ACID, reliable for financial data |
+| **Backend** | Python + FastAPI (future) | Fast, modern, async |
+| **Frontend** | React/Streamlit (future) | TBD based on user needs |
 
-**Why this stack?**
-- ✅ 100% open-source (no API costs)
-- ✅ Runs completely offline (after initial model download)
-- ✅ Data never leaves your machine
-- ✅ Production-ready performance
+**Principles:**
+- ✅ Open-source first
+- ✅ Privacy by default (local execution)
+- ✅ No vendor lock-in
+- ✅ Production-grade tools
+
+---
+
+## 📊 Current Performance
+
+**Metrics (from real usage):**
+- **Success Rate:** 100% (queries return answers)
+- **Avg Response Time:** 18.2s (⚠️ needs optimization → target <5s)
+- **Avg Confidence:** 36% (⚠️ needs improvement → target >45%)
+- **Document Coverage:** 88% of test questions answerable
+- **Pass Rate:** 60-75% (⚠️ optimizing to >85%)
+
+**Known Issues:**
+- Generation too slow (LLM taking 18s average)
+- Responses too verbose (2000+ chars)
+- Some queries have low confidence
+
+**Active Optimizations:**
+- Reduce `LLM_MAX_TOKENS` (512→256) for speed
+- Improve system prompt for concise answers
+- Tune retrieval parameters
+- Add query expansion for GST terms
+
+---
 
 ## 🚀 Quick Start
 
@@ -78,27 +254,25 @@ JSON Response + Metrics
 # Install Ollama
 curl -fsSL https://ollama.com/install.sh | sh
 
-# Pull LLM model (4.7 GB, one-time)
+# Pull LLM model (~5GB)
 ollama pull qwen2.5:7b-instruct
 ```
 
 ### Setup
 ```bash
-# 1. Clone repository
+# 1. Clone and install
 git clone https://github.com/yourusername/ledgermind.git
 cd ledgermind
-
-# 2. Install dependencies
 pip install -r requirements.txt
 
-# 3. Ingest GST documents (one-time, ~2-3 minutes)
+# 2. Ingest documents (one-time, ~2-3 min)
 python scripts/ingest_pdfs.py
 
-# 4. Start Ollama server (keep running)
+# 3. Start Ollama (keep running in background)
 ollama serve
 ```
 
-### Run Assistant
+### Run
 ```bash
 # Interactive mode
 python main.py
@@ -106,87 +280,11 @@ python main.py
 # Single question
 python main.py "What is Input Tax Credit?"
 
-# Commands in interactive mode:
-#   help     - Show available commands
-#   stats    - System statistics
-#   metrics  - Performance metrics
-#   quit     - Exit
+# View performance metrics
+python view_metrics.py
 ```
 
-## 💡 Example Usage
-
-**Question:**
-```
-What are the conditions for claiming Input Tax Credit?
-```
-
-**Response:**
-```
-To claim Input Tax Credit, the following conditions must be met:
-
-1. You must possess a tax invoice or debit note
-2. The goods or services must have been received
-3. The tax must have been paid to the government
-4. You must have filed your GST returns
-
-All conditions under Section 16(2) of the CGST Act must be satisfied
-[Source: CGST Act 2017, Section 16, Page 42].
-
-Sources:
-  1. a2017-12.pdf (Page 42, 85% match)
-  2. cgst-rules.pdf (Page 67, 72% match)
-
-Confidence: 85%
-Faithfulness: 92%
-Relevance: 88%
-Time: 2.3s
-```
-
-## 📊 Current Status
-
-**Phase:** Phase 1 - LLM Assistant ✅ **COMPLETE**  
-**Pass Rate:** 60-75% on 50-question test suite (target: >70%)
-
-| Component | Status | Details |
-|-----------|--------|---------|
-| RAG Pipeline | ✅ Working | ChromaDB + bge-large embeddings |
-| LLM Integration | ✅ Working | Qwen2.5-7B via Ollama |
-| GST Knowledge Base | ✅ Loaded | 855 chunks, 294 pages |
-| Metrics System | ✅ Working | Confidence, faithfulness, relevance |
-| Test Suite | ✅ Ready | 50 questions, automated evaluation |
-| Document Verification | ✅ Complete | 88% coverage |
-
-**Next:** Improve pass rate to >85% through prompt optimization
-
-## 📂 Project Structure
-
-```
-ledgermind/
-├── data/
-│   └── gst/                    # GST PDF documents (2 files, 294 pages)
-├── rag/
-│   ├── pipeline.py             # RAG orchestration
-│   └── metrics.py              # Performance tracking
-├── llm/
-│   └── assistant.py            # LLM interface (Ollama)
-├── scripts/
-│   ├── ingest_pdfs.py          # PDF → ChromaDB ingestion
-│   └── clean.sh                # Clean ChromaDB
-├── tests/
-│   ├── test_questions.json     # 50 ground truth questions
-│   ├── evaluate_assistant.py   # Automated evaluation
-│   ├── verify_documents.py     # Document coverage check
-│   ├── test_search.py          # Retrieval-only tests
-│   └── verify_embeddings.py    # Embedding consistency check
-├── config.py                   # Centralized configuration
-├── main.py                     # Main entry point
-├── view_metrics.py             # Metrics viewer
-├── chroma_db/                  # Vector database (created on first run)
-├── rag_metrics.jsonl           # Performance logs
-├── QUICKSTART.md               # Quick commands
-├── TESTING_GUIDE.md            # How to test & improve
-└── RAG_FINETUNING_GUIDE.md     # Optimization strategies
-```
+---
 
 ## 🧪 Testing & Validation
 
@@ -195,139 +293,110 @@ ledgermind/
 # Quick test (10 questions, ~3-5 min)
 python tests/evaluate_assistant.py --limit 10
 
-# Full evaluation (50 questions, ~10-15 min)
+# Full test (50 questions, ~10-15 min)
 python tests/evaluate_assistant.py
 
-# Verify documents can answer questions
+# Verify documents
 python tests/verify_documents.py
 
-# View performance metrics
+# View metrics
 python view_metrics.py
 ```
 
-### Success Metrics
-- **Pass Rate:** >70% (minimum), >85% (production-ready)
-- **Faithfulness:** >75% (grounded in documents)
-- **Response Time:** <3s average
-- **Document Coverage:** 88% of test questions answerable
+### Success Criteria
+- **Pass Rate:** >85% (currently 60-75%)
+- **Response Time:** <5s average (currently 18s)
+- **Faithfulness:** >80% (grounded in docs)
+- **Confidence:** >45% average (currently 36%)
 
-**Current Results:**
-- ✅ Document coverage: 88% (44/50 questions)
-- ✅ Faithfulness: ~75%
-- ✅ Response time: ~2.3s average
+---
 
-## 🗺️ Roadmap
+## 📂 Project Structure
 
-### ✅ Phase 1: LLM Assistant (Complete)
-- [x] RAG pipeline with ChromaDB
-- [x] Local LLM integration (Qwen2.5-7B)
-- [x] GST document ingestion (294 pages)
-- [x] Metrics tracking system
-- [x] Automated test suite (50 questions)
-- [x] Document verification tool
+```
+ledgermind/
+├── data/
+│   └── gst/                    # GST PDF documents (294 pages)
+├── rag/
+│   ├── pipeline.py             # RAG orchestration
+│   └── metrics.py              # Performance tracking
+├── llm/
+│   └── assistant.py            # LLM interface (Ollama)
+├── scripts/
+│   ├── ingest_pdfs.py          # PDF → ChromaDB
+│   └── clean.sh                # Clean database
+├── tests/
+│   ├── test_questions.json     # 50 test questions
+│   ├── evaluate_assistant.py   # Automated evaluation
+│   ├── verify_documents.py     # Coverage check
+│   └── test_search.py          # Retrieval tests
+├── config.py                   # All settings
+├── main.py                     # Entry point
+├── chroma_db/                  # Vector database (855 chunks)
+└── rag_metrics.jsonl           # Performance logs
+```
 
-### 🔄 Phase 2: Optimization (Current - Week 1-4)
-- [ ] Improve system prompt (add examples, strict rules)
-- [ ] Query expansion (GST abbreviations)
-- [ ] Tune retrieval parameters
-- [ ] Reach >85% pass rate
-- [ ] Collect human feedback
-
-### ⏳ Phase 3: Production Readiness (Month 2-3)
-- [ ] Hybrid search (semantic + keyword)
-- [ ] Re-ranking for better accuracy
-- [ ] Add GSTR forms knowledge
-- [ ] Web interface (Streamlit/FastAPI)
-- [ ] User feedback system
-
-### 🎯 Phase 4: Accounting Integration (Month 4+)
-- [ ] Database for accounting data (ledgers, invoices)
-- [ ] LLM reads YOUR accounting data
-- [ ] Transaction validation
-- [ ] Auto-categorization
-- [ ] GST return generation assistance
-
-## 🤝 Contributing
-
-**We need help with:**
-- 📜 Adding more GST documents (IGST Act, UTGST Act, Circulars)
-- 🧪 Testing with real-world questions
-- 💼 Accounting domain expertise
-- 🎨 UI/UX design (Phase 3)
-
-**How to contribute:**
-1. Test the assistant with your questions
-2. Report issues or incorrect answers
-3. Suggest improvements to prompts
-4. Add more test questions
-
-## 🎯 Why LedgerMind?
-
-| Problem | LedgerMind Solution |
-|---------|-------------------|
-| ❌ Pure LLMs hallucinate on GST rules | ✅ RAG retrieves actual official documents |
-| ❌ Search is keyword-based and clunky | ✅ Natural language understanding |
-| ❌ No source verification | ✅ Every answer cites document + page |
-| ❌ Paid APIs are expensive | ✅ 100% free, runs locally |
-| ❌ Data privacy concerns | ✅ Never leaves your machine |
-| ❌ Requires internet | ✅ Works completely offline |
-
-## 📊 Performance Validation
-
-Our system is scientifically tested:
-- **Test Suite:** 50 carefully crafted GST questions
-- **Automated Evaluation:** Keyword matching, faithfulness scoring
-- **Document Verification:** 88% of questions answerable from our docs
-- **Continuous Metrics:** Every query tracked for performance
-
-**Transparency:** We don't just claim accuracy, we measure and publish it.
+---
 
 ## 📚 Documentation
 
 - **[QUICKSTART.md](QUICKSTART.md)** - Essential commands
-- **[TESTING_GUIDE.md](TESTING_GUIDE.md)** - How to test and improve
+- **[TESTING_GUIDE.md](TESTING_GUIDE.md)** - How to test & improve
 - **[RAG_FINETUNING_GUIDE.md](RAG_FINETUNING_GUIDE.md)** - Optimization strategies
-- **[METRICS_AND_FINETUNING_SUMMARY.md](METRICS_AND_FINETUNING_SUMMARY.md)** - Detailed metrics guide
-
-## 🔧 Configuration
-
-All settings in `config.py`:
-```python
-# LLM Settings
-LLM_MODEL_NAME = "qwen2.5:7b-instruct"
-LLM_TEMPERATURE = 0.3  # Conservative for accuracy
-LLM_MAX_TOKENS = 512
-
-# RAG Settings
-RAG_NUM_RESULTS = 5  # Top-K chunks to retrieve
-RAG_MIN_SIMILARITY = 0.25  # Similarity threshold
-
-# Embedding Model
-EMBEDDING_MODEL = "BAAI/bge-large-en-v1.5"  # 1024 dimensions
-```
-
-Easy to experiment without code changes!
-
-## 📄 License
-
-MIT License - see [LICENSE](LICENSE) file for details.
-
-## 🙏 Acknowledgments
-
-- **GST Documents:** Government of India (public domain)
-- **LLM:** Qwen2.5 by Alibaba Cloud
-- **Embeddings:** BGE by Beijing Academy of AI
-- **Infrastructure:** ChromaDB, Ollama
+- **[PROJECT_CONTEXT.md](PROJECT_CONTEXT.md)** - Full project context for LLMs
 
 ---
 
-## 📧 Contact & Support
+## 🎯 Success Metrics
+
+### Phase 1 (Current):
+- ✅ 100% local execution (no APIs)
+- ✅ 855 document chunks indexed
+- ✅ 88% test coverage
+- 🔄 Reaching 85% pass rate (in progress)
+
+### Phase 2 (Goal):
+- Accounting database operational
+- LLM can query user's financial data
+- Answers both rules AND data questions
+
+### Phase 3 (Goal):
+- 10+ functions available to LLM
+- Can create invoices, validate transactions
+- Complete GST workflow supported
+
+---
+
+## 🤝 Contributing
+
+**Current needs:**
+- 🧪 Testing with real GST questions
+- 📜 More GST documents (IGST Act, Circulars)
+- 💼 Accounting domain expertise
+- 🐛 Bug reports and feature requests
+
+**How to contribute:**
+1. Test the assistant with your questions
+2. Report incorrect answers
+3. Suggest prompt improvements
+4. Add test questions
+
+---
+
+## 📄 License
+
+MIT License - see [LICENSE](LICENSE) for details.
+
+---
+
+## 📧 Contact
 
 - **Issues:** [GitHub Issues](https://github.com/yourusername/ledgermind/issues)
 - **Discussions:** [GitHub Discussions](https://github.com/yourusername/ledgermind/discussions)
 
 ---
 
-**Built with ❤️ for accountants and SMEs who need accurate, verifiable GST compliance assistance.**
+**Building the foundation, one phase at a time. 🚀**
 
-*Phase 1 Complete: January 1, 2026*
+*Last Updated: January 1, 2026*  
+*Phase 1 Complete | Optimizing for Production*
