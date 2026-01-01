@@ -3,3 +3,19 @@ __pycache__/
 .env
 chroma_db/
 .DS_Store
+
+# Metrics and evaluation results
+rag_metrics.jsonl
+evaluation_results.json
+user_feedback.jsonl
+
+# Temporary test files
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+*.egg
+*.egg-info/
+dist/
+build/

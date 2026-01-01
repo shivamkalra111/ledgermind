@@ -71,9 +71,16 @@ class RAGPipeline:
         if VERBOSE:
             print("\n[1/2] Connecting to vector database...")
         
+        # Suppress telemetry warning
+        import warnings
+        warnings.filterwarnings("ignore", message=".*telemetry.*")
+        
         self.client = chromadb.PersistentClient(
             path=db_path,
-            settings=Settings(anonymized_telemetry=False)
+            settings=Settings(
+                anonymized_telemetry=False,
+                allow_reset=True
+            )
         )
         
         self.embedding_function = embedding_functions.SentenceTransformerEmbeddingFunction(
