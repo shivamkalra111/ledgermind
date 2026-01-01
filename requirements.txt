@@ -1,22 +1,13 @@
-# LedgerMind Dependencies
+# LedgerMind - GST Compliance Assistant
+# Requirements
 
-# Vector Database
-chromadb>=0.4.22
-
-# Embeddings
-sentence-transformers>=2.2.2
-
-# PDF Processing
-pypdf>=3.17.0
+# Core dependencies (already have these)
 pdfplumber>=0.10.0
+chromadb>=0.4.18
+sentence-transformers>=2.2.0
 
-# LLM (will be installed when needed in Step 1.6)
-# Uncomment these when you reach Step 1.6:
-# transformers>=4.36.0
-# torch>=2.1.0
-# accelerate>=0.25.0
-# bitsandbytes>=0.41.0
+# New for LLM integration
+requests>=2.31.0  # For Ollama API calls
 
-# Utilities
-numpy>=1.24.0
-
+# Optional: for better error messages
+colorama>=0.4.6

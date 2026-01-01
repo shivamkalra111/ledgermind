@@ -117,12 +117,19 @@ class GSTProcessor:
         
         # Initialize embedding function FIRST (needed for collection)
         print("\n[1/3] Loading embedding model...")
-        print("   Model: bge-large-en-v1.5 (optimized for formal text)")
+        
+        # Import from config to ensure consistency
+        import sys
+        from pathlib import Path
+        sys.path.insert(0, str(Path(__file__).parent.parent))
+        from config import EMBEDDING_MODEL
+        
+        print(f"   Model: {EMBEDDING_MODEL} (optimized for formal text)")
         print("   First run: Downloads ~1.3 GB (takes 3-5 minutes)")
         
         from chromadb.utils import embedding_functions
         self.embedding_function = embedding_functions.SentenceTransformerEmbeddingFunction(
-            model_name="BAAI/bge-large-en-v1.5"
+            model_name=EMBEDDING_MODEL
         )
         print(f"   ✅ Embedding model loaded (1024 dimensions)")
         
