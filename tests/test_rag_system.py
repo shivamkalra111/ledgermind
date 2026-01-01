@@ -257,7 +257,7 @@ def test_performance_benchmarks():
     pipeline = RAGPipeline()
     
     questions = [
-        "What is GST?",
+        "What is CGST?",
         "How to file GST returns?",
         "What are GST rates?",
         "Who is eligible for ITC?",

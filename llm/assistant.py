@@ -230,7 +230,7 @@ if __name__ == "__main__":
     llm = LLMAssistant()
     
     # Simple generation
-    response = llm.generate("What is GST?")
+    response = llm.generate("What is CGST?")
     print(response)
     
     # Generation with context

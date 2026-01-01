@@ -33,7 +33,7 @@ def main():
     if not Path(args.file).exists():
         print(f"❌ Metrics file not found: {args.file}")
         print("\nNo metrics collected yet. Run some queries first:")
-        print("  python main.py \"What is GST?\"")
+        print("  python main.py \"What is CGST?\"")
         return
     
     # Load and display metrics

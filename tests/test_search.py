@@ -34,7 +34,7 @@ def test_collection_exists():
         assert count > 0, f"Collection is empty! Expected documents, got {count}"
         print(f"   ✅ PASS: Collection exists with {count} documents")
         return True
-    except Exception as e:
+        except Exception as e:
         print(f"   ❌ FAIL: {e}")
         return False
 
@@ -146,7 +146,7 @@ def test_semantic_search():
             if has_terms and similarity >= test['min_similarity']:
                 print(f"   ✅ PASS: '{query}' (similarity: {similarity:.3f})")
                 passed += 1
-            else:
+                else:
                 print(f"   ❌ FAIL: '{query}' - results not relevant")
         
         return passed == len(test_queries)
@@ -212,12 +212,12 @@ def test_chunk_quality():
     except Exception as e:
         print(f"   ❌ FAIL: {e}")
         return False
-
+    
 def interactive_search():
     """Interactive search mode for manual testing."""
-    print("\n" + "="*70)
-    print("Interactive Search Mode")
-    print("="*70)
+        print("\n" + "="*70)
+        print("Interactive Search Mode")
+        print("="*70)
     print("Type your questions (or 'quit' to exit)\n")
     
     try:
@@ -240,13 +240,13 @@ def interactive_search():
         
         while True:
             query = input("🔍 Question: ").strip()
-            
-            if query.lower() in ['quit', 'exit', 'q']:
-                break
-            
-            if not query:
-                continue
-            
+                
+                if query.lower() in ['quit', 'exit', 'q']:
+                    break
+                
+                if not query:
+                    continue
+                
             results = collection.query(query_texts=[query], n_results=2)
             
             if results['ids'][0]:
@@ -264,9 +264,9 @@ def interactive_search():
             else:
                 print("❌ No results found\n")
                 
-    except KeyboardInterrupt:
+            except KeyboardInterrupt:
         print("\n")
-    except Exception as e:
+            except Exception as e:
         print(f"\n❌ Error: {e}\n")
 
 def run_all_tests():
