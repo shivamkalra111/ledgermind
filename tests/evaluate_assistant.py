@@ -129,19 +129,25 @@ class AssistantEvaluator:
             # Evaluate
             score, passed = self.evaluate_answer(result, test)
             
-            # Record result
+            # Record result (convert booleans to JSON-safe format)
             test_result = {
                 'test_id': test['id'],
                 'question': test['question'],
                 'category': test.get('category', 'unknown'),
                 'difficulty': test.get('difficulty', 'unknown'),
                 'answer': result['answer'],
-                'confidence': result['confidence'],
-                'faithfulness': result.get('faithfulness', 0),
-                'relevance': result.get('relevance', 0),
-                'duration': duration,
-                'score': score,
-                'passed': passed
+                'confidence': float(result['confidence']),
+                'faithfulness': float(result.get('faithfulness', 0)),
+                'relevance': float(result.get('relevance', 0)),
+                'duration': float(duration),
+                'score': {
+                    'keyword_match': float(score['keyword_match']),
+                    'source_match': bool(score['source_match']),
+                    'confidence_ok': bool(score['confidence_ok']),
+                    'faithfulness_ok': bool(score['faithfulness_ok']),
+                    'relevance_ok': bool(score['relevance_ok'])
+                },
+                'passed': bool(passed)
             }
             
             self.results.append(test_result)

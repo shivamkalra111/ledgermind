@@ -327,34 +327,48 @@ class RAGEvaluator:
 
 def calculate_faithfulness(answer: str, context_chunks: List[str]) -> float:
     """
-    Calculate faithfulness score - how much of the answer is grounded in context.
-    
-    Simple heuristic: Check if key phrases from answer exist in context.
-    For production, use more sophisticated methods (NLI models, etc.)
+    Calculate faithfulness score - improved version.
+    Handles citations, better sentence splitting, stricter matching.
     """
-    # Split answer into sentences
-    sentences = [s.strip() for s in answer.split('.') if s.strip()]
+    import re
+    
+    # Better sentence splitting (handles ?, !, etc.)
+    sentences = re.split(r'[.!?]+', answer)
+    
+    # Remove citations before checking (don't penalize them)
+    citation_pattern = r'\[source:.*?\]'
+    sentences = [re.sub(citation_pattern, '', s, flags=re.IGNORECASE).strip() 
+                 for s in sentences if len(s.strip()) > 10]
     
     if not sentences:
         return 0.0
     
-    # Check how many sentences have support in context
-    supported_sentences = 0
+    # Combine context
     context_text = ' '.join(context_chunks).lower()
     
+    supported_count = 0
+    
     for sentence in sentences:
-        # Extract key phrases (simple: words > 4 chars)
-        key_words = [w for w in sentence.lower().split() if len(w) > 4]
+        sentence_lower = sentence.lower()
+        
+        # Extract meaningful words (>3 chars, not stop words)
+        stop_words = {'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'by'}
+        key_words = [
+            w for w in sentence_lower.split() 
+            if len(w) > 3 and w not in stop_words
+        ]
         
         if not key_words:
             continue
         
-        # Check if majority of key words appear in context
-        words_in_context = sum(1 for w in key_words if w in context_text)
-        if words_in_context / len(key_words) > 0.5:
-            supported_sentences += 1
+        # Check word presence in context
+        words_found = sum(1 for w in key_words if w in context_text)
+        
+        # Stricter threshold: 70% instead of 50%
+        if words_found / len(key_words) >= 0.7:
+            supported_count += 1
     
-    return supported_sentences / len(sentences)
+    return supported_count / len(sentences) if sentences else 0.0
 
 
 def calculate_relevance(question: str, answer: str) -> float:
