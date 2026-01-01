@@ -20,8 +20,9 @@ LLM_MODEL_NAME = "qwen2.5:7b-instruct"
 LLM_BASE_URL = "http://localhost:11434"
 
 # Generation parameters
-LLM_TEMPERATURE = 0.1  # Lower = more focused, Higher = more creative
-LLM_MAX_TOKENS = 512   # Maximum response length
+# Generation parameters
+LLM_TEMPERATURE = 0.1  # Revert to 0.1 for maximum faithfulness
+LLM_MAX_TOKENS = 300   # Keep this to limit verbosity
 LLM_TOP_P = 0.9        # Nucleus sampling
 
 # ============================================================================
@@ -29,9 +30,11 @@ LLM_TOP_P = 0.9        # Nucleus sampling
 # ============================================================================
 
 # Number of chunks to retrieve for context
+# Reverted to 7 after testing showed 5 chunks caused low faithfulness
 RAG_NUM_RESULTS = 7
 
 # Minimum similarity threshold (0.0-1.0)
+# Revert to 0.2 to fix Q8 (GSTR-3B) failure
 RAG_MIN_SIMILARITY = 0.2
 
 # ============================================================================
@@ -57,9 +60,8 @@ GST_SYSTEM_PROMPT = """You are a GST compliance assistant for India.
 CRITICAL RULES:
 1. Answer ONLY from the provided context
 2. If information is not in context, say "I cannot find this in the provided documents"
-3. Never use external knowledge
-4. Never assume or speculate
-5. Cite [Source: filename, Page X] for every claim
+3. Cite [Source: filename, Page X] for every claim
+4. Keep answers CONCISE (max 3-4 sentences).
 
 If the context is insufficient, respond:
 "The provided documents don't contain sufficient information to answer this question."

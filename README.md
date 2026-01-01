@@ -43,6 +43,8 @@ Confidence: 62% | Faithfulness: 88% | Time: 2.3s
 
 **Features:**
 - 🗣️ Natural language GST questions
+- 🔍 Hybrid search (semantic + keyword/BM25)
+- 📚 Enhanced chunks (context-enriched, sentence-aware)
 - 🔍 Retrieves from official documents (294 pages, 855 chunks)
 - ✅ Cites sources (document + page)
 - 📊 Tracks performance metrics
@@ -61,16 +63,18 @@ Confidence: 62% | Faithfulness: 88% | Time: 2.3s
 - [x] RAG pipeline with ChromaDB
 - [x] Local LLM (Qwen2.5-7B via Ollama)
 - [x] 294 pages GST documents ingested
-- [x] Semantic chunking (structure-aware)
+- [x] Hybrid search (semantic + keyword/BM25)
+- [x] Enhanced chunking (context-enriched + sentence-aware)
 - [x] Metrics system (confidence, faithfulness, relevance)
 - [x] 50-question test suite
 - [x] Document coverage verification (88%)
 
 **Current Work (Week 1-2):**
-- [ ] Optimize response time (18s → <5s)
-- [ ] Improve system prompt (reduce verbosity)
-- [ ] Tune retrieval parameters
-- [ ] Reach >85% pass rate
+- [x] Hybrid search for better precision
+- [x] Context-enriched chunking (adds document/section metadata)
+- [x] Sentence-aware chunking (no broken sentences)
+- [ ] Re-ingest with enhanced chunking
+- [ ] Validate improvements (target: 80-85% pass rate)
 - [ ] Collect human feedback
 
 ---
@@ -240,10 +244,11 @@ Result: Invoice #INV-001 created ✅
 - Some queries have low confidence
 
 **Active Optimizations:**
-- Reduce `LLM_MAX_TOKENS` (512→256) for speed
-- Improve system prompt for concise answers
-- Tune retrieval parameters
-- Add query expansion for GST terms
+- ✅ Hybrid search (semantic + keyword/BM25) - COMPLETE
+- ✅ Context-enriched chunking (adds metadata) - COMPLETE
+- ✅ Sentence-aware chunking (no broken sentences) - COMPLETE
+- 🔄 Re-ingestion needed to apply enhanced chunking
+- 🔄 Validation of improvements (expecting +15-20% pass rate)
 
 ---
 
@@ -318,12 +323,14 @@ ledgermind/
 ├── data/
 │   └── gst/                    # GST PDF documents (294 pages)
 ├── rag/
-│   ├── pipeline.py             # RAG orchestration
+│   ├── pipeline.py             # RAG orchestration (retrieval + generation)
+│   ├── hybrid_search.py        # Semantic + keyword search (BM25)
+│   ├── enhanced_chunker.py     # Context-enriched, sentence-aware chunking
 │   └── metrics.py              # Performance tracking
 ├── llm/
 │   └── assistant.py            # LLM interface (Ollama)
 ├── scripts/
-│   ├── ingest_pdfs.py          # PDF → ChromaDB
+│   ├── ingest_pdfs.py          # PDF → ChromaDB (with enhanced chunking)
 │   └── clean.sh                # Clean database
 ├── tests/
 │   ├── test_questions.json     # 50 test questions
@@ -340,10 +347,11 @@ ledgermind/
 
 ## 📚 Documentation
 
-- **[QUICKSTART.md](QUICKSTART.md)** - Essential commands
+- **[ENHANCED_CHUNKING_GUIDE.md](ENHANCED_CHUNKING_GUIDE.md)** - Context-enriched + sentence-aware chunking
+- **[HYBRID_SEARCH_GUIDE.md](HYBRID_SEARCH_GUIDE.md)** - Semantic + keyword search
 - **[TESTING_GUIDE.md](TESTING_GUIDE.md)** - How to test & improve
-- **[RAG_FINETUNING_GUIDE.md](RAG_FINETUNING_GUIDE.md)** - Optimization strategies
-- **[PROJECT_CONTEXT.md](PROJECT_CONTEXT.md)** - Full project context for LLMs
+- **[QUICKSTART.md](documents/QUICKSTART.md)** - Essential commands
+- **[PROJECT_CONTEXT.md](documents/PROJECT_CONTEXT.md)** - Full project context for LLMs
 
 ---
 

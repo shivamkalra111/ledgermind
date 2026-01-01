@@ -1,10 +1,10 @@
 """
 Process GST PDFs and Load into ChromaDB
 
-Optimized for legal/financial documents:
-- Uses bge-large-en-v1.5 embeddings (better for formal text)
-- Semantic chunking (preserves sections and concepts)
-- Complete metadata tracking
+Enhanced with:
+- Context-enriched chunking (adds document/section context)
+- Sentence-aware splitting (never breaks mid-sentence)
+- Semantic boundaries (preserves sections and concepts)
 """
 
 import pdfplumber
@@ -14,98 +14,12 @@ from sentence_transformers import SentenceTransformer
 import os
 from pathlib import Path
 import re
+import sys
 
-class SemanticChunker:
-    """
-    Semantic chunking for legal/financial documents.
-    Splits by sections, rules, and logical units.
-    """
-    
-    def __init__(self, max_chunk_size=1200, min_chunk_size=200):
-        self.max_chunk_size = max_chunk_size
-        self.min_chunk_size = min_chunk_size
-        
-        # Patterns for GST document structure
-        self.section_patterns = [
-            r'Section \d+[\.:)]',     # Section 16: or Section 16.
-            r'Rule \d+[\.:)]',        # Rule 42: or Rule 42.
-            r'Chapter [IVX]+',        # Chapter IV
-            r'\n\d+\.',               # Numbered points: 1. 2. 3.
-            r'\([a-z]\)',             # Sub-points: (a) (b) (c)
-            r'\n\n+'                  # Paragraph breaks
-        ]
-    
-    def find_semantic_boundaries(self, text):
-        """Find positions where semantic units begin."""
-        boundaries = {0}  # Start of text
-        
-        for pattern in self.section_patterns:
-            for match in re.finditer(pattern, text):
-                pos = match.start()
-                if pos > 0:
-                    boundaries.add(pos)
-        
-        boundaries = sorted(boundaries)
-        boundaries.append(len(text))  # End of text
-        return boundaries
-    
-    def extract_section_id(self, text):
-        """Try to extract section/rule identifier from text."""
-        # Look in first 300 characters
-        section_match = re.search(
-            r'(Section|Rule|Chapter)\s+([IVX\d]+(?:\(\d+\))?(?:\([a-z]\))?)',
-            text[:300]
-        )
-        if section_match:
-            return section_match.group(0)
-        return None
-    
-    def chunk(self, text, base_metadata):
-        """Create chunks at semantic boundaries."""
-        boundaries = self.find_semantic_boundaries(text)
-        chunks = []
-        chunk_index = 0
-        
-        i = 0
-        while i < len(boundaries) - 1:
-            start = boundaries[i]
-            
-            # Accumulate text until max_chunk_size
-            end = boundaries[i + 1]
-            j = i + 1
-            
-            while j < len(boundaries) - 1:
-                next_end = boundaries[j + 1]
-                if (next_end - start) > self.max_chunk_size:
-                    break
-                end = next_end
-                j += 1
-            
-            chunk_text = text[start:end].strip()
-            
-            # Only keep substantial chunks
-            if len(chunk_text) >= self.min_chunk_size:
-                section_id = self.extract_section_id(chunk_text)
-                
-                metadata = {
-                    **base_metadata,
-                    'chunk_index': chunk_index,
-                    'char_start': start,
-                    'char_end': end,
-                    'section_id': section_id,
-                    'chunking_strategy': 'semantic',
-                    'chunk_size': len(chunk_text)
-                }
-                
-                chunks.append({
-                    'text': chunk_text,
-                    'metadata': metadata
-                })
-                chunk_index += 1
-            
-            i = j
-        
-        return chunks
+# Import enhanced chunker
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from rag.enhanced_chunker import EnhancedSemanticChunker as SemanticChunker
+
 
 class GSTProcessor:
     """Process GST PDFs with optimized settings for legal text."""

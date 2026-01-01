@@ -12,6 +12,7 @@ import time
 
 from llm.assistant import LLMAssistant
 from rag.metrics import RAGMetrics, calculate_faithfulness, calculate_relevance
+from rag.hybrid_search import HybridSearcher
 from config import (
     LLM_MODEL_NAME,
     LLM_BASE_URL,
@@ -97,6 +98,15 @@ class RAGPipeline:
             print(f"   ✅ Connected to '{collection_name}'")
             print(f"   📊 {doc_count} documents indexed")
         
+        # Initialize hybrid searcher
+        if VERBOSE:
+            print("\n   → Building hybrid search index (semantic + keyword)...")
+        
+        self.hybrid_searcher = HybridSearcher(self.collection)
+        
+        if VERBOSE:
+            print("   ✅ Hybrid search enabled")
+        
         # 2. Setup LLM
         if VERBOSE:
             print(f"\n[2/2] Loading LLM ({model_name})...")
@@ -146,18 +156,25 @@ class RAGPipeline:
         if VERBOSE:
             print(f"🔍 Question: {question}")
         
-        # Step 1: Retrieve relevant chunks
+        # Step 1: Retrieve relevant chunks using HYBRID SEARCH
         retrieval_start = time.time()
         
         if VERBOSE:
-            print(f"   → Searching knowledge base...")
+            print(f"   → Searching knowledge base (hybrid: semantic + keyword)...")
         
         try:
-            results = self.collection.query(
-                query_texts=[question],
+            # Use hybrid search instead of pure semantic
+            hybrid_results = self.hybrid_searcher.hybrid_search(
+                question=question,
                 n_results=n_results,
-                include=['documents', 'metadatas', 'distances']
+                semantic_weight=0.7,  # 70% semantic
+                keyword_weight=0.3    # 30% keyword
             )
+            
+            # Show explanation if verbose
+            if VERBOSE:
+                self.hybrid_searcher.explain_search(question, hybrid_results)
+            
         except Exception as e:
             error_result = {
                 'question': question,
@@ -175,26 +192,25 @@ class RAGPipeline:
                 )
             return error_result
         
-        # Format chunks
+        # Format chunks from hybrid results
         context_chunks = []
         all_similarities = []
         
-        for doc, meta, dist in zip(
-            results['documents'][0],
-            results['metadatas'][0],
-            results['distances'][0]
-        ):
-            similarity = 1 - dist
+        for result in hybrid_results:
+            similarity = result['similarity']
             all_similarities.append(similarity)
             
             # Filter by minimum similarity
             if similarity >= min_similarity:
                 context_chunks.append({
-                    'text': doc,
-                    'source': meta.get('source', 'Unknown'),
-                    'page': meta.get('page', 'N/A'),
+                    'text': result['text'],
+                    'source': result['source'],
+                    'page': result['page'],
                     'similarity': similarity,
-                    'metadata': meta
+                    'metadata': result['metadata'],
+                    'search_type': result['search_type'],  # semantic/keyword/both
+                    'semantic_score': result['semantic_score'],
+                    'keyword_score': result['keyword_score']
                 })
         
         retrieval_time = time.time() - retrieval_start
