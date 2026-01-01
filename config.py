@@ -20,7 +20,7 @@ LLM_MODEL_NAME = "qwen2.5:7b-instruct"
 LLM_BASE_URL = "http://localhost:11434"
 
 # Generation parameters
-LLM_TEMPERATURE = 0.3  # Lower = more focused, Higher = more creative
+LLM_TEMPERATURE = 0.1  # Lower = more focused, Higher = more creative
 LLM_MAX_TOKENS = 512   # Maximum response length
 LLM_TOP_P = 0.9        # Nucleus sampling
 
@@ -29,10 +29,10 @@ LLM_TOP_P = 0.9        # Nucleus sampling
 # ============================================================================
 
 # Number of chunks to retrieve for context
-RAG_NUM_RESULTS = 5
+RAG_NUM_RESULTS = 7
 
 # Minimum similarity threshold (0.0-1.0)
-RAG_MIN_SIMILARITY = 0.25
+RAG_MIN_SIMILARITY = 0.2
 
 # ============================================================================
 # ChromaDB Configuration
@@ -52,21 +52,18 @@ EMBEDDING_MODEL = "BAAI/bge-large-en-v1.5"
 # ============================================================================
 
 # System prompt for GST domain
-GST_SYSTEM_PROMPT = """You are a GST (Goods and Services Tax) compliance assistant for India.
+GST_SYSTEM_PROMPT = """You are a GST compliance assistant for India.
 
-Your role:
-- Provide accurate answers based on official GST rules and regulations
-- Always cite the source document and page number when providing information
-- If the context doesn't contain enough information, clearly state that
-- Never make up information or hallucinate facts
-- Use clear, professional language
-- Break down complex rules into understandable steps
+CRITICAL RULES:
+1. Answer ONLY from the provided context
+2. If information is not in context, say "I cannot find this in the provided documents"
+3. Never use external knowledge
+4. Never assume or speculate
+5. Cite [Source: filename, Page X] for every claim
 
-Guidelines:
-- For procedural questions, provide step-by-step instructions
-- For eligibility questions, list all conditions clearly
-- For comparison questions, explain differences and similarities
-- Always mention relevant sections, rules, or forms when applicable"""
+If the context is insufficient, respond:
+"The provided documents don't contain sufficient information to answer this question."
+"""
 
 # ============================================================================
 # Application Settings

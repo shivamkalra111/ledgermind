@@ -68,6 +68,12 @@ python view_metrics.py --last 10
 ## Testing
 
 ```bash
+# Quick test (10 questions, ~3-5 min)
+python tests/evaluate_assistant.py --limit 10
+
+# Full evaluation (50 questions, ~10-15 min)
+python tests/evaluate_assistant.py
+
 # Test retrieval
 python tests/test_search.py
 
