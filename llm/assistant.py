@@ -7,6 +7,8 @@ running through Ollama. Model can be easily changed via configuration.
 
 import requests
 import json
+import asyncio
+import aiohttp
 from typing import List, Dict, Optional
 
 
@@ -222,6 +224,81 @@ Answer (based on the context provided):"""
             # Revert on failure
             self.model_name = old_model
             raise RuntimeError(f"Failed to switch to {new_model_name}: {e}")
+    
+    # ========================================================================
+    # Async Methods (for parallel processing)
+    # ========================================================================
+    
+    async def generate_async(
+        self,
+        prompt: str,
+        temperature: float = 0.3,
+        max_tokens: int = 512,
+        top_p: float = 0.9
+    ) -> str:
+        """
+        Async version of generate() for parallel processing.
+        
+        Args:
+            prompt: Input prompt for the model
+            temperature: Sampling temperature
+            max_tokens: Maximum tokens to generate
+            top_p: Nucleus sampling parameter
+        
+        Returns:
+            Generated text
+        """
+        payload = {
+            "model": self.model_name,
+            "prompt": prompt,
+            "stream": False,
+            "options": {
+                "temperature": temperature,
+                "top_p": top_p,
+                "num_predict": max_tokens
+            }
+        }
+        
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.post(
+                    self.api_url,
+                    json=payload,
+                    timeout=aiohttp.ClientTimeout(total=120)
+                ) as response:
+                    response.raise_for_status()
+                    result = await response.json()
+                    return result.get('response', '').strip()
+                    
+        except asyncio.TimeoutError:
+            raise TimeoutError("LLM generation timed out (>2 minutes)")
+        except Exception as e:
+            raise RuntimeError(f"LLM generation failed: {e}")
+    
+    async def generate_with_context_async(
+        self,
+        question: str,
+        context_chunks: List[Dict],
+        system_prompt: Optional[str] = None,
+        **kwargs
+    ) -> str:
+        """
+        Async version of generate_with_context() for parallel processing.
+        
+        Args:
+            question: User's question
+            context_chunks: List of dicts with 'text', 'source', 'page' keys
+            system_prompt: Optional system instruction
+            **kwargs: Additional arguments passed to generate_async()
+        
+        Returns:
+            Generated answer
+        """
+        # Build prompt (synchronous, fast)
+        prompt = self._build_prompt(question, context_chunks, system_prompt)
+        
+        # Generate asynchronously
+        return await self.generate_async(prompt, **kwargs)
 
 
 # Example usage

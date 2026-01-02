@@ -9,6 +9,7 @@ from chromadb.config import Settings
 from chromadb.utils import embedding_functions
 from typing import Dict, List, Optional
 import time
+import asyncio
 
 from llm.assistant import LLMAssistant
 from rag.metrics import RAGMetrics, calculate_faithfulness, calculate_relevance
@@ -331,6 +332,242 @@ class RAGPipeline:
         
         # Return complete result
         return result
+    
+    async def answer_async(
+        self,
+        question: str,
+        n_results: int = RAG_NUM_RESULTS,
+        min_similarity: float = RAG_MIN_SIMILARITY,
+        temperature: float = LLM_TEMPERATURE,
+        max_tokens: int = LLM_MAX_TOKENS
+    ) -> Dict:
+        """
+        Async version of answer() for parallel processing.
+        
+        Metrics calculation is done in background to not block the response.
+        
+        Args:
+            question: User's question
+            n_results: Number of chunks to retrieve
+            min_similarity: Minimum similarity threshold
+            temperature: LLM temperature
+            max_tokens: Maximum response length
+        
+        Returns:
+            Dict with answer, sources, confidence, etc.
+        """
+        start_time = time.time()
+        
+        # Start metrics tracking
+        if self.enable_metrics:
+            self.metrics.start_query(question)
+        
+        if VERBOSE:
+            print(f"🔍 Question: {question}")
+        
+        # Step 1: Retrieve relevant chunks (synchronous - ChromaDB doesn't support async yet)
+        retrieval_start = time.time()
+        
+        if VERBOSE:
+            print(f"   → Searching knowledge base (hybrid: semantic + keyword)...")
+        
+        try:
+            hybrid_results = self.hybrid_searcher.hybrid_search(
+                question=question,
+                n_results=n_results,
+                semantic_weight=0.7,
+                keyword_weight=0.3
+            )
+            
+            if VERBOSE:
+                self.hybrid_searcher.explain_search(question, hybrid_results)
+            
+        except Exception as e:
+            error_result = {
+                'question': question,
+                'answer': f"Error retrieving documents: {e}",
+                'sources': [],
+                'confidence': 0.0,
+                'chunks_used': 0,
+                'time_taken': time.time() - start_time,
+                'error': str(e)
+            }
+            if self.enable_metrics:
+                self.metrics.finalize_query(
+                    total_time=error_result['time_taken'],
+                    error=str(e)
+                )
+            return error_result
+        
+        # Format chunks
+        context_chunks = []
+        all_similarities = []
+        
+        for result in hybrid_results:
+            similarity = result['similarity']
+            all_similarities.append(similarity)
+            
+            if similarity >= min_similarity:
+                context_chunks.append({
+                    'text': result['text'],
+                    'source': result['source'],
+                    'page': result['page'],
+                    'similarity': similarity,
+                    'metadata': result['metadata'],
+                    'search_type': result['search_type'],
+                    'semantic_score': result['semantic_score'],
+                    'keyword_score': result['keyword_score']
+                })
+        
+        retrieval_time = time.time() - retrieval_start
+        
+        # Log retrieval metrics
+        if self.enable_metrics:
+            self.metrics.log_retrieval(
+                chunks_retrieved=len(all_similarities),
+                chunks_used=len(context_chunks),
+                avg_similarity=sum(all_similarities) / len(all_similarities) if all_similarities else 0,
+                top_similarity=max(all_similarities) if all_similarities else 0,
+                retrieval_time=retrieval_time
+            )
+        
+        if not context_chunks:
+            no_result = {
+                'question': question,
+                'answer': "I couldn't find relevant information to answer this question.",
+                'sources': [],
+                'confidence': 0.0,
+                'chunks_used': 0,
+                'time_taken': time.time() - start_time,
+                'faithfulness': 0.0,
+                'relevance': 0.0
+            }
+            if self.enable_metrics:
+                self.metrics.finalize_query(
+                    total_time=no_result['time_taken'],
+                    error=None
+                )
+            return no_result
+        
+        avg_similarity = sum(c['similarity'] for c in context_chunks) / len(context_chunks)
+        
+        if VERBOSE:
+            print(f"   ✅ Found {len(context_chunks)} relevant chunks")
+            print(f"   📊 Average similarity: {avg_similarity:.1%}")
+        
+        # Step 2: Generate answer with LLM (ASYNC)
+        generation_start = time.time()
+        
+        if VERBOSE:
+            print(f"   → Generating answer with LLM...")
+        
+        try:
+            answer = await self.llm.generate_with_context_async(
+                question=question,
+                context_chunks=context_chunks,
+                system_prompt=self.system_prompt,
+                temperature=temperature,
+                max_tokens=max_tokens
+            )
+        except Exception as e:
+            error_result = {
+                'question': question,
+                'answer': f"Error generating answer: {e}",
+                'sources': self._format_sources(context_chunks),
+                'confidence': avg_similarity,
+                'chunks_used': len(context_chunks),
+                'time_taken': time.time() - start_time,
+                'error': str(e)
+            }
+            if self.enable_metrics:
+                self.metrics.finalize_query(
+                    total_time=error_result['time_taken'],
+                    error=str(e)
+                )
+            return error_result
+        
+        generation_time = time.time() - generation_start
+        
+        # Log generation metrics
+        if self.enable_metrics:
+            self.metrics.log_generation(
+                answer=answer,
+                generation_time=generation_time
+            )
+        
+        if VERBOSE:
+            print(f"   ✅ Answer generated ({len(answer)} chars)")
+        
+        time_taken = time.time() - start_time
+        sources = self._format_sources(context_chunks)
+        
+        # Build result (without metrics - they'll be calculated in background)
+        result = {
+            'question': question,
+            'answer': answer,
+            'sources': sources,
+            'confidence': avg_similarity,
+            'chunks_used': len(context_chunks),
+            'time_taken': time_taken,
+            'faithfulness': None,  # Will be calculated in background
+            'relevance': None      # Will be calculated in background
+        }
+        
+        # Calculate metrics in background (don't block response)
+        if self.enable_metrics:
+            context_texts = [c['text'] for c in context_chunks]
+            asyncio.create_task(self._calculate_metrics_background(
+                question, answer, context_texts, sources, time_taken
+            ))
+        
+        if VERBOSE:
+            print(f"   ⏱️  Total time: {time_taken:.2f}s")
+            print(f"   📊 Metrics calculating in background...")
+        
+        # Return result immediately (metrics calculated async)
+        return result
+    
+    async def _calculate_metrics_background(
+        self,
+        question: str,
+        answer: str,
+        context_texts: List[str],
+        sources: List[str],
+        time_taken: float
+    ):
+        """
+        Calculate faithfulness and relevance in background.
+        Doesn't block the main response.
+        """
+        try:
+            # Run in thread pool since these functions are synchronous
+            loop = asyncio.get_event_loop()
+            
+            faithfulness_score = await loop.run_in_executor(
+                None, calculate_faithfulness, answer, context_texts
+            )
+            relevance_score = await loop.run_in_executor(
+                None, calculate_relevance, question, answer
+            )
+            
+            # Log sources
+            if self.enable_metrics:
+                self.metrics.log_sources(sources)
+            
+            # Finalize metrics
+            if self.enable_metrics:
+                self.metrics.finalize_query(
+                    total_time=time_taken,
+                    error=None
+                )
+            
+            if VERBOSE:
+                print(f"   📊 Faithfulness: {faithfulness_score:.1%}")
+                print(f"   📊 Relevance: {relevance_score:.1%}")
+                
+        except Exception as e:
+            if VERBOSE:
+                print(f"   ⚠️  Background metrics calculation failed: {e}")
     
     def _format_sources(self, chunks: List[Dict]) -> List[str]:
         """Format source citations."""
