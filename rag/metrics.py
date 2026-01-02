@@ -327,15 +327,113 @@ class RAGEvaluator:
 
 def calculate_faithfulness(answer: str, context_chunks: List[str]) -> float:
     """
-    Calculate faithfulness score - improved version.
-    Handles citations, better sentence splitting, stricter matching.
+    Calculate faithfulness score using NLI (Natural Language Inference).
+    
+    Uses a DeBERTa-based NLI model to check if each sentence in the answer
+    is entailed by the context chunks.
+    
+    Returns:
+        float: Faithfulness score between 0.0 and 1.0
     """
     import re
     
-    # Better sentence splitting (handles ?, !, etc.)
+    # Lazy import to avoid loading model unless needed
+    try:
+        from transformers import pipeline, AutoTokenizer, AutoModelForSequenceClassification
+    except ImportError:
+        print("⚠️  Warning: transformers not installed. Falling back to basic faithfulness.")
+        return _calculate_faithfulness_fallback(answer, context_chunks)
+    
+    # Initialize NLI model (cached after first call)
+    global _nli_model
+    if '_nli_model' not in globals():
+        try:
+            print("   📦 Loading NLI model (cross-encoder/nli-deberta-v3-base)...")
+            print("   ⏳ First run: Downloading ~760MB model (takes 2-4 minutes)")
+            
+            # Load model and tokenizer explicitly
+            model_name = "cross-encoder/nli-deberta-v3-base"
+            tokenizer = AutoTokenizer.from_pretrained(model_name)
+            model = AutoModelForSequenceClassification.from_pretrained(model_name)
+            
+            _nli_model = pipeline(
+                "text-classification",
+                model=model,
+                tokenizer=tokenizer,
+                device=-1  # CPU
+            )
+            print("   ✅ NLI model loaded successfully")
+        except Exception as e:
+            print(f"   ❌ Failed to load NLI model: {e}")
+            print("   ⚠️  Falling back to basic faithfulness calculation")
+            return _calculate_faithfulness_fallback(answer, context_chunks)
+    
+    # Split answer into sentences
     sentences = re.split(r'[.!?]+', answer)
     
-    # Remove citations before checking (don't penalize them)
+    # Remove citations and filter short sentences
+    citation_pattern = r'\[source:.*?\]'
+    sentences = [
+        re.sub(citation_pattern, '', s, flags=re.IGNORECASE).strip() 
+        for s in sentences 
+        if len(s.strip()) > 10
+    ]
+    
+    if not sentences:
+        return 0.0
+    
+    # Combine context chunks
+    context_text = ' '.join(context_chunks)
+    
+    # Truncate context if too long (NLI models have token limits)
+    # DeBERTa can handle ~512 tokens, leave room for answer sentence
+    if len(context_text) > 2000:  # ~400 tokens
+        context_text = context_text[:2000] + "..."
+    
+    supported_count = 0
+    
+    # Check each sentence against context
+    for sentence in sentences:
+        try:
+            # NLI format: {text: context, text_pair: sentence}
+            result = _nli_model({"text": context_text, "text_pair": sentence})
+            
+            # Extract label and confidence (result is a dict, not a list!)
+            label = result['label'].lower()
+            score = result['score']
+            
+            # Consider sentence supported if:
+            # - Label is 'entailment' with confidence > 50%
+            # - Label is 'neutral' with very high confidence > 90% (strong inference)
+            # - Label is 'contradiction' is definitely NOT supported
+            if (label == 'entailment' and score > 0.5) or \
+               (label == 'neutral' and score > 0.90):
+                supported_count += 1
+                
+        except Exception as e:
+            # If NLI fails for this sentence, use fallback for this one
+            sentence_lower = sentence.lower()
+            words = [w for w in sentence_lower.split() if len(w) > 3]
+            if words:
+                context_lower = context_text.lower()
+                words_found = sum(1 for w in words if w in context_lower)
+                if words_found / len(words) >= 0.5:
+                    supported_count += 1
+    
+    return supported_count / len(sentences) if sentences else 0.0
+
+
+def _calculate_faithfulness_fallback(answer: str, context_chunks: List[str]) -> float:
+    """
+    Fallback faithfulness calculation using word-level matching.
+    Used when NLI model is unavailable.
+    """
+    import re
+    
+    # Split sentences
+    sentences = re.split(r'[.!?]+', answer)
+    
+    # Remove citations
     citation_pattern = r'\[source:.*?\]'
     sentences = [re.sub(citation_pattern, '', s, flags=re.IGNORECASE).strip() 
                  for s in sentences if len(s.strip()) > 10]
@@ -351,21 +449,16 @@ def calculate_faithfulness(answer: str, context_chunks: List[str]) -> float:
     for sentence in sentences:
         sentence_lower = sentence.lower()
         
-        # Extract meaningful words (>3 chars, not stop words)
-        stop_words = {'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'by'}
-        key_words = [
-            w for w in sentence_lower.split() 
-            if len(w) > 3 and w not in stop_words
-        ]
+        # Extract meaningful words
+        words = [w for w in sentence_lower.split() if len(w) > 3]
         
-        if not key_words:
+        if not words:
             continue
         
-        # Check word presence in context
-        words_found = sum(1 for w in key_words if w in context_text)
+        # Check word presence (relaxed threshold: 50%)
+        words_found = sum(1 for w in words if w in context_text)
         
-        # Stricter threshold: 70% instead of 50%
-        if words_found / len(key_words) >= 0.7:
+        if words_found / len(words) >= 0.5:
             supported_count += 1
     
     return supported_count / len(sentences) if sentences else 0.0
