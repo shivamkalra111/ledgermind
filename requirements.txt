@@ -15,5 +15,9 @@ nltk>=3.8.1
 # New for LLM integration
 requests>=2.31.0  # For Ollama API calls
 
+# For NLI-based faithfulness calculation
+transformers>=4.30.0  # HuggingFace transformers for NLI model
+torch>=2.0.0  # PyTorch backend for transformers
+
 # Optional: for better error messages
 colorama>=0.4.6
