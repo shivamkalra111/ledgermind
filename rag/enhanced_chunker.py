@@ -29,18 +29,19 @@ class EnhancedSemanticChunker:
     - Smart sizing (respects min/max while preserving meaning)
     """
     
-    def __init__(self, max_chunk_size=1200, min_chunk_size=200):
-        self.max_chunk_size = max_chunk_size
-        self.min_chunk_size = min_chunk_size
+    def __init__(self, max_chunk_size=2000, min_chunk_size=300):
+        self.max_chunk_size = max_chunk_size  # Increased to 2000 to fit full legal sections
+        self.min_chunk_size = min_chunk_size  # Increased to 300 for better context
         
         # Patterns for GST document structure
         self.section_patterns = [
-            r'Section \d+[\.:)]',     # Section 16: or Section 16.
-            r'Rule \d+[\.:)]',        # Rule 42: or Rule 42.
-            r'Chapter [IVX]+',        # Chapter IV
-            r'\n\d+\.',               # Numbered points: 1. 2. 3.
-            r'\([a-z]\)',             # Sub-points: (a) (b) (c)
-            r'\n\n+'                  # Paragraph breaks
+            r'\nSection \d+[\.:)]',   # Section 16: or Section 16. (must start new line)
+            r'\nRule \d+[\.:)]',      # Rule 42: or Rule 42. (must start new line)
+            r'\nChapter [IVX]+',      # Chapter IV (must start new line)
+            r'\n\d+\.\s',             # Numbered points: 1. 2. 3. (with space after)
+            r'\n\n+'                  # Paragraph breaks (keep this for natural breaks)
+            # Removed: r'\([a-z]\)' - Do NOT split on sub-clauses like (a) (b) (c)
+            # Reason: Legal sections like "Section 16(2)(a)-(d)" should stay together
         ]
     
     def find_semantic_boundaries(self, text: str) -> List[int]:

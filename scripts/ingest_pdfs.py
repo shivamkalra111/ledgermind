@@ -90,13 +90,13 @@ class GSTProcessor:
         # Initialize semantic chunker
         print("\n[3/3] Initializing semantic chunker...")
         self.chunker = SemanticChunker(
-            max_chunk_size=1200,   # Larger for complete concepts
-            min_chunk_size=200     # Minimum meaningful size
+            max_chunk_size=2000,   # Larger to keep full legal sections together
+            min_chunk_size=300     # Higher minimum for better context
         )
         
         print("   ✅ Ready to process PDFs!")
-        print(f"   Chunking: Semantic (preserves sections/rules)")
-        print(f"   Max chunk size: 1200 chars")
+        print(f"   Chunking: Semantic (preserves sections/rules, no sub-clause splits)")
+        print(f"   Max chunk size: 2000 chars")
     
     def extract_text_from_pdf(self, pdf_path):
         """Extract text from PDF file."""
@@ -126,44 +126,72 @@ class GSTProcessor:
         text_pages = self.extract_text_from_pdf(pdf_path)
         print(f"  ✅ Extracted {len(text_pages)} pages")
         
-        # Step 2: Semantic chunking
-        print(f"\n  [Step 2/4] Semantic chunking (preserves sections)...")
-        all_chunks = []
+        # Step 2: Combine all pages into one document with page markers
+        print(f"\n  [Step 2/4] Combining pages (preserves cross-page sections)...")
+        full_text = ""
+        page_boundaries = []  # Track where each page starts in the full text
         
         for page_data in text_pages:
             page_num = page_data['page']
             text = page_data['text']
             
-            # Create semantic chunks
-            chunks = self.chunker.chunk(
-                text,
-                base_metadata={
-                    'source': pdf_name,
-                    'page': page_num,
-                    'document_type': 'gst_legal'
-                }
-            )
-            all_chunks.extend(chunks)
+            # Record where this page starts
+            page_boundaries.append({
+                'page': page_num,
+                'start_char': len(full_text)
+            })
+            
+            # Add page text with marker
+            full_text += f"\n[PAGE {page_num}]\n{text}\n"
         
-        print(f"  ✅ Created {len(all_chunks)} semantic chunks")
+        print(f"  ✅ Combined {len(text_pages)} pages into single document ({len(full_text)} chars)")
+        
+        # Step 3: Semantic chunking on the FULL document
+        print(f"\n  [Step 3/4] Semantic chunking (preserves cross-page sections)...")
+        
+        # Create semantic chunks from full document
+        chunks = self.chunker.chunk(
+            full_text,
+            base_metadata={
+                'source': pdf_name,
+                'document_type': 'gst_legal'
+            }
+        )
+        
+        # Now assign page numbers to each chunk based on where it appears
+        for chunk in chunks:
+            # Find which page this chunk is primarily on
+            chunk_start = chunk['metadata'].get('char_start', 0)
+            
+            # Find the page this chunk starts in
+            chunk_page = 1
+            for boundary in reversed(page_boundaries):
+                if chunk_start >= boundary['start_char']:
+                    chunk_page = boundary['page']
+                    break
+            
+            chunk['metadata']['page'] = chunk_page
+        
+        print(f"  ✅ Created {len(chunks)} semantic chunks")
         
         # Show sample chunk
-        if all_chunks:
-            sample = all_chunks[0]
+        if chunks:
+            sample = chunks[0]
             print(f"\n  📄 Sample chunk:")
+            print(f"     Page: {sample['metadata'].get('page', 'N/A')}")
             print(f"     Section: {sample['metadata'].get('section_id', 'N/A')}")
             print(f"     Size: {len(sample['text'])} chars")
             print(f"     Preview: {sample['text'][:150]}...")
         
-        # Step 3: Prepare data for ChromaDB
-        print(f"\n  [Step 3/4] Preparing data for ChromaDB...")
+        # Step 4: Prepare data for ChromaDB
+        print(f"\n  [Step 4/4] Preparing data for ChromaDB...")
         
         # Prepare data (ChromaDB will handle embeddings automatically)
         ids = []
         documents = []
         metadatas = []
         
-        for i, chunk in enumerate(all_chunks):
+        for i, chunk in enumerate(chunks):
             chunk_id = f"{pdf_name.replace('.pdf', '')}_{i}"
             ids.append(chunk_id)
             documents.append(chunk['text'])
@@ -181,8 +209,8 @@ class GSTProcessor:
         
         print(f"  ✅ Prepared {len(ids)} chunks for embedding")
         
-        # Step 4: Store in ChromaDB (embeddings created automatically)
-        print(f"\n  [Step 4/4] Storing in ChromaDB...")
+        # Step 5: Store in ChromaDB (embeddings created automatically)
+        print(f"\n  [Step 5/5] Storing in ChromaDB...")
         print(f"  (ChromaDB will create {len(documents)} embeddings with bge-large)")
         
         # Add to ChromaDB - it will use the embedding_function we specified
