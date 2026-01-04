@@ -1,0 +1,5 @@
+category,investment_limit_cr,turnover_limit_cr,investment_limit_inr,turnover_limit_inr,effective_from,description
+micro,1,5,10000000,50000000,2020-07-01,Micro Enterprise - Investment <= ₹1 Cr AND Turnover <= ₹5 Cr
+small,10,50,100000000,500000000,2020-07-01,Small Enterprise - Investment <= ₹10 Cr AND Turnover <= ₹50 Cr
+medium,50,250,500000000,2500000000,2020-07-01,Medium Enterprise - Investment <= ₹50 Cr AND Turnover <= ₹250 Cr
+

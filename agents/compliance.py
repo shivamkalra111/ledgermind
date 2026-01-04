@@ -12,8 +12,9 @@ from core.knowledge import KnowledgeBase
 from llm.client import LLMClient
 from config import (
     COMPLIANCE_OVERDUE_DAYS,
-    GST_SLABS_2026,
-    COMPLIANCE_PROMPT
+    COMPLIANCE_PROMPT,
+    get_gst_slabs,
+    get_compliance_rules
 )
 
 
@@ -173,11 +174,17 @@ class ComplianceAgent:
         """Get correct GST rate for an item based on 2026 slabs."""
         
         description_lower = description.lower()
+        gst_slabs = get_gst_slabs()
         
-        for slab_name, slab_info in GST_SLABS_2026.items():
-            for item in slab_info["items"]:
-                if item in description_lower:
-                    return slab_info["rate"]
+        for slab_name, slab_info in gst_slabs.items():
+            rate = slab_info.get("rate", 0)
+            items = slab_info.get("items", [])
+            
+            for item in items:
+                # Handle both simple strings and dict items
+                item_name = item.get("name", item) if isinstance(item, dict) else item
+                if item_name.lower() in description_lower:
+                    return rate
         
         return None
     
@@ -186,14 +193,29 @@ class ComplianceAgent:
         
         issues = []
         
-        # Blocked credit categories
-        blocked_keywords = [
-            ("food", "beverages", "catering"),
-            ("club", "membership"),
-            ("personal vehicle", "motor vehicle"),
-            ("beauty", "health services"),
-            ("travel benefits", "leave travel"),
-        ]
+        # Load blocked credit categories from config
+        compliance_rules = get_compliance_rules()
+        section_17_5 = compliance_rules.get("section_17_5_blocked_credits", {})
+        blocked_items = section_17_5.get("blocked_items", [])
+        
+        # Build keyword tuples from config
+        blocked_keywords = []
+        for item in blocked_items:
+            item_name = item.get("item", "") if isinstance(item, dict) else item
+            # Split into keywords for matching
+            keywords = tuple(item_name.lower().split())
+            if keywords:
+                blocked_keywords.append(keywords)
+        
+        # Fallback if config not loaded
+        if not blocked_keywords:
+            blocked_keywords = [
+                ("food", "beverages", "catering"),
+                ("club", "membership"),
+                ("motor", "vehicle"),
+                ("health", "services"),
+                ("travel", "benefits"),
+            ]
         
         # Check purchase tables
         tables = self.data_engine.list_tables()

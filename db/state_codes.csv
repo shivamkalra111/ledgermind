@@ -1,0 +1,40 @@
+code,state_name,state_type,region
+01,Jammu & Kashmir,UT,North
+02,Himachal Pradesh,State,North
+03,Punjab,State,North
+04,Chandigarh,UT,North
+05,Uttarakhand,State,North
+06,Haryana,State,North
+07,Delhi,UT,North
+08,Rajasthan,State,North
+09,Uttar Pradesh,State,North
+10,Bihar,State,East
+11,Sikkim,State,Northeast
+12,Arunachal Pradesh,State,Northeast
+13,Nagaland,State,Northeast
+14,Manipur,State,Northeast
+15,Mizoram,State,Northeast
+16,Tripura,State,Northeast
+17,Meghalaya,State,Northeast
+18,Assam,State,Northeast
+19,West Bengal,State,East
+20,Jharkhand,State,East
+21,Odisha,State,East
+22,Chhattisgarh,State,Central
+23,Madhya Pradesh,State,Central
+24,Gujarat,State,West
+26,Dadra & Nagar Haveli and Daman & Diu,UT,West
+27,Maharashtra,State,West
+28,Andhra Pradesh (Old),State,South
+29,Karnataka,State,South
+30,Goa,State,West
+31,Lakshadweep,UT,South
+32,Kerala,State,South
+33,Tamil Nadu,State,South
+34,Puducherry,UT,South
+35,Andaman & Nicobar Islands,UT,South
+36,Telangana,State,South
+37,Andhra Pradesh,State,South
+97,Other Territory,Other,Other
+99,Centre Jurisdiction,Other,Other
+

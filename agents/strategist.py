@@ -10,7 +10,7 @@ import statistics
 
 from core.data_engine import DataEngine
 from llm.client import LLMClient
-from config import FORECAST_MONTHS, MSME_CLASSIFICATION
+from config import FORECAST_MONTHS, get_msme_classification
 
 
 @dataclass

@@ -1,0 +1,17 @@
+sl_no,item_description,exception,reference,notes
+1,Motor Vehicles and Conveyances,"For further supply, transportation of passengers, imparting training",Section 17(5)(a),Includes all vehicles except specified
+2,Food and Beverages,"Outdoor catering where obligatory under employment contract",Section 17(5)(b),Staff welfare expenses blocked
+3,Outdoor Catering,None for general use,Section 17(5)(b),Only exception is contractual obligation
+4,Beauty Treatment,None,Section 17(5)(b),Personal services - blocked
+5,Health Services,"Where obligatory under any law for employer",Section 17(5)(b),Check applicable laws
+6,Cosmetic/Plastic Surgery,None,Section 17(5)(b),Fully blocked
+7,Club/Health/Fitness Membership,None,Section 17(5)(b),Personal consumption
+8,Rent-a-Cab/Life Insurance/Health Insurance,"For same category supply, or obligatory under law",Section 17(5)(b),Check if further supply
+9,Travel Benefits to Employees,None,Section 17(5)(b),Blocked fully
+10,Works Contract for Construction of Immovable Property,"Except for further supply of works contract",Section 17(5)(c),Real estate blocked
+11,Goods/Services for Construction of Immovable Property,"Except plant & machinery",Section 17(5)(d),Own use construction blocked
+12,Goods/Services received by Non-Resident Taxable Person,None,Section 17(5)(e),NRTP - blocked
+13,Goods/Services used for Personal Consumption,None,Section 17(5)(g),Strictly blocked
+14,Goods Lost/Stolen/Destroyed/Written Off/Disposed as Gift,None,Section 17(5)(h),Asset related
+15,Tax Paid under Section 74/129/130,None,Section 17(5)(i),Fraud/penalty related
+
