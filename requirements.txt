@@ -1,24 +1,40 @@
-# LedgerMind - GST Compliance Assistant
-# Requirements
+# LedgerMind - Agentic AI CFO Platform
+# Python 3.10+ required
 
-# Core dependencies (already have these)
-pdfplumber>=0.10.0
-chromadb>=0.4.18
-sentence-transformers>=2.2.0
+# =============================================================================
+# Core LLM
+# =============================================================================
+ollama>=0.1.0              # Ollama Python client
 
-# For hybrid search (semantic + keyword)
-rank-bm25>=0.2.2
+# =============================================================================
+# Data Engine
+# =============================================================================
+duckdb>=0.9.0              # SQL engine for Excel/CSV
+pandas>=2.0.0              # Data manipulation
+openpyxl>=3.1.0            # Excel file support
+xlrd>=2.0.0                # Legacy Excel support
 
-# For sentence-aware chunking
-nltk>=3.8.1
+# =============================================================================
+# Knowledge Base (ChromaDB)
+# =============================================================================
+chromadb>=0.4.0            # Vector database
+sentence-transformers>=2.2.0  # Embeddings (bge-large)
 
-# New for LLM integration
-requests>=2.31.0  # For Ollama API calls
-aiohttp>=3.9.0    # For async API calls
+# =============================================================================
+# PDF Processing
+# =============================================================================
+pypdf>=3.0.0               # PDF text extraction
+pdfplumber>=0.10.0         # Advanced PDF parsing
 
-# For NLI-based faithfulness calculation
-transformers>=4.30.0  # HuggingFace transformers for NLI model
-torch>=2.0.0  # PyTorch backend for transformers
+# =============================================================================
+# Agent Framework
+# =============================================================================
+langgraph>=0.0.40          # Agent orchestration
 
-# Optional: for better error messages
-colorama>=0.4.6
+# =============================================================================
+# Utilities
+# =============================================================================
+python-dotenv>=1.0.0       # Environment variables
+pydantic>=2.0.0            # Data validation
+rich>=13.0.0               # Beautiful terminal output
+typer>=0.9.0               # CLI framework

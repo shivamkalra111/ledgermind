@@ -1,360 +1,160 @@
-# LedgerMind: LLM-Powered GST Compliance Assistant
+# LedgerMind: Agentic AI CFO for MSMEs
 
-[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Status: Phase 1 - 75%](https://img.shields.io/badge/status-Phase%201%20(75%25)-orange.svg)]()
-
-> Building towards a Tally-like accounting software with intelligent LLM assistance. Currently: Optimizing production-ready GST compliance Q&A assistant using RAG with local LLMs.
+> An autonomous financial intelligence platform that transforms messy Excel/CSV data into actionable tax insights, compliance alerts, and strategic recommendations — all running locally with $0 software cost.
 
 ---
 
-## 🎯 Vision & Current Focus
+## 🎯 Vision: The "AI CFO"
 
-**Long-term Vision:** Full accounting software (like Tally) with integrated AI that can:
-- Answer compliance questions naturally
-- Analyze your accounting data
-- Validate transactions against rules
-- Auto-fill forms and generate reports
-- Provide intelligent recommendations
+**Problem:** MSMEs struggle with fragmented financial data across multiple Excel files, constantly changing GST regulations, and expensive CA consultations for routine compliance checks.
 
-**Current Focus (Phase 1):** Build and perfect the **LLM Assistant foundation**
-- ✅ RAG-powered GST Q&A system
-- 🔄 Optimize for production (speed + accuracy)
-- 📊 Validate with comprehensive testing
+**Solution:** LedgerMind is an autonomous AI platform that:
+- **Ingests** your messy Excel/CSV files (Sales, Purchases, Bank statements)
+- **Maps** them to a standard data model using AI
+- **Audits** for tax leakages, overpayments, and compliance issues
+- **Advises** on vendor optimization and cash flow health
+- **Answers** any accounting/GST question using up-to-date knowledge
 
-**Why This Order?** Master the AI/RAG layer first before adding accounting complexity. A bad LLM assistant on top of accounting data = bad product. A great LLM assistant = solid foundation for future features.
+All processing happens **locally on your machine** — your financial data never leaves your computer.
 
 ---
 
-## 📊 Current Status (January 2, 2026)
+## 🏛️ 2026 Regulatory Engine (GST 2.0)
 
-### Performance Metrics
-- **Pass Rate:** 40% (5-question sample)
-- **Avg Faithfulness:** 57% (target: 65%+)
-- **Avg Confidence:** 61% (target: 45%+) ✅
-- **Avg Response Time:** 38s (target: <5s) ❌
-- **Keyword Match:** 50-100%
-- **Document Coverage:** 88%
+LedgerMind natively understands the **GST 2.0 Reforms** (Effective Sept 2025/Jan 2026):
 
-### ✅ Recent Wins
-1. **Fixed Cross-Page Chunking** - Major breakthrough!
-   - **Problem:** Section 16(2) was split across pages 29-30
-   - **Solution:** Process entire PDF as one document, chunk semantically
-   - **Result:** 485 chunks (down from 1049), better coherence
-   - **Impact:** Faithfulness improved 45% → 57%
+### Simplified Tax Slabs
 
-2. **Hybrid Search** - Combining semantic + keyword (BM25)
-   - Confidence: 36% → 61% (+69%)
-   - Excellent precision on specific terms
+| Slab | Category | Key Items (2026) |
+|------|----------|------------------|
+| **0% (Exempt)** | Essentials | Health/Life Insurance, UHT Milk, Paneer, Diagnostic Kits, 33 life-saving drugs |
+| **5% (Merit)** | High Volume | Soaps, Toothpaste, FMCG, Agri-machinery, Hotel Stay <₹7.5k, Gyms/Salons |
+| **18% (Standard)** | Standard | Electronics, ACs, Small Cars, Motorcycles <350cc, Cement, most B2B Services |
+| **40% (Sin/Luxury)** | Demerit | Tobacco, Luxury SUVs, High-end Bikes (>350cc), Yachts, Aerated Drinks |
 
-3. **NLI-Based Faithfulness** - Replaced word-matching heuristic
-   - Using `cross-encoder/nli-deberta-v3-base`
-   - More accurate entailment detection
-   - Still improving (57% avg)
+### MSMED Act 2026 Compliance
 
-### 🚧 Current Blockers
-
-**Priority #1: Response Time (38s → Target: <5s)**
-- Retrieval: ~3s (acceptable)
-- LLM generation: ~25s (needs optimization)
-- NLI faithfulness: ~10s (blocking user response)
-
-**Priority #2: Faithfulness (57% → Target: 65%)**
-- Some questions still get low scores (0-25%)
-- LLM picking different aspects from chunks than expected
-- Need better chunk precision
-
-**Priority #3: Scalability**
-- `RAG_NUM_RESULTS=10` is high (slow, expensive for LLM)
-- Need better way to get top-3 accurate results
-- Current retrieval sometimes misses best chunks
+- **Section 43B(h):** Mandatory payment to MSEs within **45 days**. Late payments are disallowed as tax deductions.
+- **Classification:** Micro (<₹10Cr), Small (<₹100Cr), Medium (<₹500Cr)
 
 ---
 
-## 🚀 Technical Roadmap (Next 2-4 Weeks)
+## 🤖 Core Architecture: The Agentic Workflow
 
-### **Phase 1A: Performance & Accuracy Optimization** (CURRENT)
+LedgerMind doesn't just "chat" — it performs tasks through an **autonomous Plan-Act-Verify loop**.
 
-#### Week 1: Quick Wins
-**1. Async Processing Pipeline** ⭐ (Target: 38s → 15-20s)
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                         USER DROPS FOLDER                           │
+│                    (Excel/CSV files + Questions)                    │
+└─────────────────────────────────────────────────────────────────────┘
+                                   │
+                                   ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                    AGENT 1: DISCOVERY (Mapper)                      │
+│  • Scans Excel headers using LLM                                    │
+│  • Identifies: Sales, Purchases, Bank, Tax Returns                  │
+│  • Maps local headers → Standard Data Model                         │
+│  • Loads into DuckDB as SQL tables                                  │
+│  • Saves mapping in discovery_meta.json (remembers format)          │
+└─────────────────────────────────────────────────────────────────────┘
+                                   │
+                                   ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                    AGENT 2: COMPLIANCE (Auditor)                    │
+│  • Cross-references data against GST PDFs (ChromaDB)                │
+│  • ITC Check: Flag wrong tax rates (18% charged vs 5% allowed)      │
+│  • Reconciliation: Sales in GSTR-1 vs Bank Credits                  │
+│  • Section 17(5): Identify blocked credits (food, personal vehicle) │
+│  • Section 43B(h): Flag overdue vendor payments (>45 days)          │
+└─────────────────────────────────────────────────────────────────────┘
+                                   │
+                                   ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                    AGENT 3: STRATEGIST (Optimizer)                  │
+│  • Vendor Ranking: Reliability score (payment terms vs delivery)    │
+│  • MSME Risk: Flag non-MSME vendors impacting 43B(h) deductions     │
+│  • Profit Analysis: High-margin products after tax liability        │
+│  • Cash Flow Forecast: Predict next month's tax + salary payouts    │
+└─────────────────────────────────────────────────────────────────────┘
+                                   │
+                                   ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                         ACTIONABLE INSIGHTS                         │
+│  "You overpaid ₹12,400 on Soap purchases (18% vs 5%)"              │
+│  "3 vendors are past 45-day payment — ₹2.1L at risk of disallowance"│
+│  "Your top margin product is X after GST adjustment"                │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 💡 What Can LedgerMind Do?
+
+### 1. Autonomous Tasks (Agentic)
+| Task | Agent | Example Output |
+|------|-------|----------------|
+| **Structure Discovery** | Discovery | "Found 3 sheets: Sales_Register, Purchase_Ledger, Bank_Statement" |
+| **Tax Rate Verification** | Compliance | "Vendor charged 18% on Soaps. Current rate is 5%. Tax saving: ₹3,200" |
+| **ITC Reconciliation** | Compliance | "₹45,000 ITC claimed but vendor GSTIN is cancelled" |
+| **Section 43B(h) Alerts** | Compliance | "Payment to ABC Traders overdue by 12 days — disallowance risk" |
+| **Blocked Credit Detection** | Compliance | "₹8,500 spent on staff meals — ITC blocked under Section 17(5)" |
+| **Vendor Risk Analysis** | Strategist | "5 vendors are not MSME registered — affects ₹12L in deductions" |
+| **Cash Flow Projection** | Strategist | "Estimated tax liability for Q4: ₹1.8L (due Jan 20)" |
+
+### 2. Knowledge Queries (Rules from ChromaDB)
+Questions about GST laws, accounting standards, compliance rules:
+- "What is the time limit for claiming ITC?"
+- "Can I claim ITC on hotel stays for business travel?"
+- "What changed in GST for FMCG products in 2026?"
+- "Explain Section 43B(h) compliance requirements"
+
+### 3. Data Queries (User's Data from DuckDB)
+Questions about the user's own financial data:
+- "What's my total sales this quarter?"
+- "Show me all purchases from Vendor X"
+- "Which invoices are pending payment beyond 45 days?"
+- "What's my GST liability for December?"
+
+---
+
+## 🛠️ Tech Stack ($0 Software Cost)
+
+| Layer | Tool | Role |
+|-------|------|------|
+| **Core LLM** | `qwen2.5:7b-instruct` | Reasoning, SQL generation, tax interpretation |
+| **Local Host** | Ollama | Runs LLM locally (privacy + $0 API cost) |
+| **Data Engine** | DuckDB | Ultra-fast engine — Excel files as SQL tables |
+| **Knowledge Base** | ChromaDB | Stores GST PDFs for RAG rule lookups |
+| **Agent Framework** | LangGraph | Manages agent orchestration and hand-offs |
+| **Embeddings** | `bge-large-en-v1.5` | Semantic search for rule retrieval |
+
+---
+
+## 🔒 Implementation Guardrails
+
+### 1. Math Safety
+> **LLM is FORBIDDEN from doing arithmetic.**
+
+All calculations must go through Python functions or SQL queries. The LLM reasons about *what* to calculate, not *how* to calculate.
+
 ```python
-# Run retrieval, LLM, and metrics in parallel
-- Search (3s) + LLM (25s) → Sequential: 28s
-- Search → LLM | Calculate metrics async → Parallel: 15s
+# ✅ Correct: LLM generates SQL, DuckDB executes
+SELECT SUM(tax_amount) FROM purchases WHERE vendor_gstin = 'ABC123'
+
+# ❌ Wrong: LLM doing math
+"The total is 18% of 50,000 which is 9,000..."  # BLOCKED
 ```
 
-**2. Hybrid Search Boosting** (Better top-3 accuracy)
-```python
-# Dynamic boosting based on query type
-if has_section_numbers: boost_keyword(2x)
-elif is_definitional: boost_semantic(1.5x)
-```
+### 2. Data Locality
+> **All processing happens on YOUR machine.**
 
-**Expected Impact:**
-- Response time: 38s → 15-20s (✅ 50% faster)
-- Top-3 accuracy: +10-15%
-- No additional complexity
+No data is sent to external clouds. Ollama runs locally, DuckDB is file-based, ChromaDB persists locally.
 
----
+### 3. Semantic Verification
+> **Ask, don't guess.**
 
-#### Week 2-3: Core Improvements
-**3. Re-Ranking Layer** ⭐⭐ (HIGHEST IMPACT)
-```
-Current: Query → Semantic Search → Top 10 → LLM
-Better:  Query → Semantic Search → Top 30 → Re-rank → Top 5 → LLM
-```
-
-**Why:**
-- Bi-encoders (bge-large) give ~80% accuracy
-- Cross-encoders give ~90-95% accuracy
-- Standard in production RAG (LlamaIndex, LangChain)
-
-**Implementation:**
-- Model: `cross-encoder/ms-marco-MiniLM-L-12-v2`
-- Retrieve 30 chunks (fast, approximate)
-- Re-rank with cross-encoder (accurate)
-- Return top 5 → LLM
-
-**Expected Impact:**
-- Faithfulness: 57% → 70%+ (✅ 20%+ improvement)
-- Reduce `RAG_NUM_RESULTS` from 10 → 5 (faster LLM)
-- Net latency: +200ms (re-ranking) -10s (fewer chunks) = **-9.8s faster**
-
-**Trade-off:** Adds 200ms latency, but **much better precision** → fewer chunks → faster LLM → net win!
-
----
-
-**4. Hierarchical Chunking** (Better context)
-```
-Parent Chunk: Full Section 16 (all subsections)
-Child Chunks: 16(1), 16(2), 16(3), 16(4)
-
-Retrieval: Search children → Return parents to LLM
-```
-
-**Why:**
-- Child chunks are specific (good for matching)
-- Parent chunks have full context (good for LLM)
-- No information loss
-
-**Expected Impact:**
-- Faithfulness: +5-10%
-- Better handling of multi-part questions
-
----
-
-#### Week 3-4: Advanced Optimization
-**5. Query Rewriting** (Generic, not question-specific)
-```python
-# Use fast LLM to enhance query before retrieval
-User: "conditions for claiming ITC"
-Rewritten: "Section 16(2) eligibility conditions invoice goods received"
-```
-
-**Implementation:**
-- Use Qwen2.5:1.5B (fast, ~200ms)
-- Generic templates (no hardcoded questions)
-
----
-
-**6. Metadata-Driven Retrieval** (Faster, more accurate)
-```python
-# Filter chunks before search
-if "Section 16" in query:
-    filter = {"section_id": {"$contains": "16"}}
-elif query_type == "definitional":
-    filter = {"section_type": "definitions"}
-```
-
-**Expected Impact:**
-- Speed: 3s → 1-2s (search fewer chunks)
-- Accuracy: +5-10% (more relevant subset)
-
----
-
-**7. Chunk Deduplication** (Reduce LLM cost)
-```python
-# Merge overlapping chunks, extract key sentences
-10 verbose chunks (8k tokens) → 5 dense chunks (3k tokens)
-```
-
-**Expected Impact:**
-- LLM time: 25s → 12-15s
-- Quality: Same or better (less noise)
-
----
-
-### Success Criteria (End of Phase 1A)
-- **Response Time:** <5s average (currently 38s)
-- **Faithfulness:** >70% average (currently 57%)
-- **Pass Rate:** >85% (currently 40%)
-- **Reduced `RAG_NUM_RESULTS`:** 10 → 5 (scalability)
-
----
-
-## 🗺️ Full Development Roadmap
-
-### ✅ **Phase 1: LLM Assistant Core** (IN PROGRESS - 75% Complete)
-
-**Completed:**
-- [x] RAG pipeline with ChromaDB
-- [x] Local LLM (Qwen2.5-7B via Ollama)
-- [x] 294 pages GST documents (485 chunks after optimization)
-- [x] Hybrid search (semantic + keyword/BM25)
-- [x] Enhanced chunking (context-enriched + sentence-aware)
-- [x] **Cross-page chunking fix** (Section 16(2) now intact)
-- [x] NLI-based faithfulness (cross-encoder/nli-deberta-v3-base)
-- [x] Metrics system (confidence, faithfulness, relevance)
-- [x] 50-question test suite
-- [x] Document coverage verification (88%)
-
-**In Progress (Next 2-4 weeks):**
-- [ ] Async processing pipeline (38s → 15-20s)
-- [ ] Re-ranking layer (faithfulness 57% → 70%+)
-- [ ] Hierarchical chunking (better context)
-- [ ] Query rewriting (better retrieval)
-- [ ] Metadata filtering (faster search)
-- [ ] Reach 85% pass rate
-
----
-
-### 🔄 **Phase 2: Accounting Data Layer** (NEXT - Month 2-3)
-**Goal:** Add accounting database so LLM can analyze YOUR data
-
-**What We'll Build:**
-```
-Current:  User asks "What is ITC?" → LLM answers from rules
-Next:     User asks "What's my ITC this month?" → LLM queries YOUR data + rules
-```
-
-**Components:**
-1. Database Schema (Customers, Vendors, Invoices, Transactions)
-2. API Layer (simple functions LLM can call)
-3. LLM Integration (answer data-specific questions)
-
-**Timeline:** 2-3 months
-
----
-
-### 🎯 **Phase 3: Function Calling / Tool Use** (Month 4-5)
-**Goal:** LLM can perform actions, not just answer questions
-
-**Architecture:** **Function Calling (NOT Agentic System)**
-
-**Why Function Calling?**
-- ✅ Simpler, more predictable
-- ✅ Sufficient for 80% of accounting tasks
-- ✅ Natively supported by Qwen2.5
-
-**Example:**
-```python
-User: "Create invoice for ABC Corp, 100k software, Maharashtra"
-
-LLM calls: create_invoice({
-    customer: "ABC Corp",
-    items: [{name: "Software", hsn: "998314", amount: 100000}],
-    cgst: 9000, sgst: 9000
-})
-```
-
-**Timeline:** 1-2 months
-
----
-
-### 🏗️ **Phase 4: Web UI & Polish** (Month 6-7)
-- Web interface (FastAPI + React or Streamlit)
-- Dashboard (revenue, GST liability, ITC)
-- Forms & Reports (GSTR-1, P&L)
-
----
-
-### 🚀 **Phase 5: Advanced Features** (Month 8+)
-- Multi-company support
-- Inventory management
-- E-invoicing integration
-- Banking integration
-- **Agentic workflows** (only if genuinely needed)
-
----
-
-## 🛠️ Tech Stack
-
-| Component | Technology | Why? |
-|-----------|-----------|------|
-| **LLM** | Qwen2.5-7B-Instruct (Ollama) | Best reasoning, function calling |
-| **Embeddings** | bge-large-en-v1.5 (1024-dim) | Optimized for legal text |
-| **Vector DB** | ChromaDB (persistent) | Fast, local, simple |
-| **Re-ranker** | cross-encoder/ms-marco-MiniLM | Production-grade accuracy |
-| **Faithfulness** | cross-encoder/nli-deberta-v3-base | Accurate entailment detection |
-| **Database** | PostgreSQL (future) | ACID, reliable |
-| **Backend** | Python + FastAPI (future) | Fast, async |
-
-**Principles:**
-- ✅ Open-source first
-- ✅ Privacy by default (local execution)
-- ✅ No vendor lock-in
-- ✅ Production-grade tools
-
----
-
-## 🚀 Quick Start
-
-### Prerequisites
-```bash
-# Install Ollama
-curl -fsSL https://ollama.com/install.sh | sh
-
-# Pull LLM model (~5GB)
-ollama pull qwen2.5:7b-instruct
-```
-
-### Setup
-```bash
-# 1. Clone and install
-git clone https://github.com/yourusername/ledgermind.git
-cd ledgermind
-pip install -r requirements.txt
-
-# 2. Ingest documents (one-time, ~2-3 min)
-python scripts/ingest_pdfs.py
-
-# 3. Start Ollama (keep running in background)
-ollama serve
-```
-
-### Run
-```bash
-# Interactive mode
-python main.py
-
-# Single question
-python main.py "What is Input Tax Credit?"
-
-# View performance metrics
-python view_metrics.py
-```
-
----
-
-## 🧪 Testing & Validation
-
-### Run Tests
-```bash
-# Quick test (5 questions, ~2-3 min)
-python tests/evaluate_assistant.py --limit 5
-
-# Full test (50 questions, ~15-20 min)
-python tests/evaluate_assistant.py
-
-# Verify documents
-python tests/verify_documents.py
-```
-
-### Current Success Criteria
-- **Pass Rate:** >85% (currently 40%)
-- **Faithfulness:** >65% (currently 57%)
-- **Confidence:** >45% (✅ currently 61%)
-- **Response Time:** <5s (currently 38s)
+If the AI encounters an unknown ledger name (e.g., "Suspense_Account_New"), it stops and asks the user for clarification rather than making assumptions.
 
 ---
 
@@ -362,99 +162,196 @@ python tests/verify_documents.py
 
 ```
 ledgermind/
-├── data/gst/                  # GST PDFs (294 pages)
-├── rag/
-│   ├── pipeline.py            # RAG orchestration
-│   ├── hybrid_search.py       # Semantic + keyword (BM25)
-│   ├── enhanced_chunker.py    # Context-enriched chunking
-│   └── metrics.py             # NLI-based faithfulness
+├── agents/
+│   ├── __init__.py
+│   ├── discovery.py          # Excel/CSV structure discovery + mapping
+│   ├── compliance.py         # ITC checks, reconciliation, 43B(h)
+│   └── strategist.py         # Vendor ranking, cash flow, optimization
+│
+├── core/
+│   ├── __init__.py
+│   ├── data_engine.py        # DuckDB integration (Excel → SQL)
+│   ├── schema.py             # Standard Data Model definitions
+│   ├── mapper.py             # Header mapping with LLM
+│   └── knowledge.py          # ChromaDB for GST rule lookups
+│
+├── orchestration/
+│   ├── __init__.py
+│   ├── workflow.py           # LangGraph agent orchestration
+│   └── router.py             # Intent classification (task vs question)
+│
 ├── llm/
-│   └── assistant.py           # LLM interface (Ollama)
-├── scripts/
-│   ├── ingest_pdfs.py         # PDF → ChromaDB (cross-page aware)
-│   └── clean.sh               # Clean database
-├── tests/
-│   ├── test_questions.json    # 50 test questions
-│   ├── evaluate_assistant.py  # Automated evaluation
-│   └── verify_documents.py    # Coverage check
-├── config.py                  # All settings
-├── main.py                    # Entry point
-└── chroma_db/                 # Vector DB (485 chunks)
+│   ├── __init__.py
+│   └── client.py             # Ollama/Qwen integration
+│
+├── knowledge/                # Authoritative rules → ChromaDB (static)
+│   ├── gst/                  # GST Act, CGST Rules, Notifications
+│   └── accounting/           # Ind AS, Accounting Standards
+│
+├── workspace/                # User's company data → DuckDB (dynamic)
+│   └── sample_company/       # Example data for testing
+│
+├── config.py                 # All configuration
+├── main.py                   # Entry point
+└── requirements.txt
+```
+
+### Data Separation Philosophy
+
+| Folder | Contains | Engine | Role |
+|--------|----------|--------|------|
+| `knowledge/` | PDFs (GST Acts, Accounting Standards) | ChromaDB | **Rules** — What the AI knows |
+| `workspace/` | Excel/CSV (user's financial data) | DuckDB | **Facts** — What to analyze |
+
+---
+
+## 🚀 Quick Start
+
+### Prerequisites
+
+```bash
+# Install Ollama
+curl -fsSL https://ollama.com/install.sh | sh
+
+# Pull the model
+ollama pull qwen2.5:7b-instruct
+
+# Start Ollama server (keep running)
+ollama serve
+```
+
+### Installation
+
+```bash
+# Clone and setup
+git clone <repo-url>
+cd ledgermind
+
+# Create virtual environment
+python -m venv venv
+source venv/bin/activate  # Windows: venv\Scripts\activate
+
+# Install dependencies
+pip install -r requirements.txt
+```
+
+### Usage
+
+```bash
+# Analyze a folder of Excel files
+python main.py /path/to/company/excels/
+
+# Ask a question
+python main.py "What is the ITC eligibility for hotel stays?"
+
+# Interactive mode
+python main.py
 ```
 
 ---
 
-## 📚 Documentation
+## 📋 Workflow Examples
 
-### Core Guides
-- **[TESTING_GUIDE.md](TESTING_GUIDE.md)** - How to test & improve
-- **[FILE_FLOW_GUIDE.md](FILE_FLOW_GUIDE.md)** - Complete system flow
-- **[HYBRID_SEARCH_GUIDE.md](HYBRID_SEARCH_GUIDE.md)** - Semantic + keyword search
+### Workflow A: "Messy Excel" Ingestion
 
-### Quick Reference
-- **[QUICKSTART.md](documents/QUICKSTART.md)** - Essential commands
-- **[PROJECT_CONTEXT.md](documents/PROJECT_CONTEXT.md)** - Full context for LLMs
+```
+1. User drops folder with: Sales_2025.xlsx, Purchases.xlsx, HDFC_Statement.csv
+
+2. Discovery Agent scans headers:
+   - Sales_2025.xlsx → "InvoiceDate", "CustomerGSTIN", "TotalAmt" → Sales_Register
+   - Purchases.xlsx → "VendorName", "BillNo", "TaxableValue" → Purchase_Ledger  
+   - HDFC_Statement.csv → "Date", "Description", "Credit", "Debit" → Bank_Statement
+
+3. Mapper creates Standard Data Model:
+   - "TotalAmt" → gross_value
+   - "TaxableValue" → taxable_value
+   - Saves mapping to discovery_meta.json
+
+4. Data loaded into DuckDB as queryable SQL tables
+```
+
+### Workflow B: Real-Time Tax Planning
+
+```
+User: "What is my tax liability for this quarter?"
+
+1. Compliance Agent queries DuckDB:
+   - SELECT SUM(output_tax) FROM sales WHERE quarter = 'Q4-2025'
+   - SELECT SUM(input_tax) FROM purchases WHERE itc_eligible = true
+
+2. Cross-checks with ChromaDB:
+   - Verifies tax rates against 2026 GST slabs
+   - Checks Section 43B(h) for overdue vendor payments
+
+3. Returns:
+   "Q4 Tax Liability: ₹1,84,500
+    - Output Tax: ₹3,20,000
+    - Eligible ITC: ₹1,35,500
+    ⚠️ Warning: ₹45,000 ITC at risk due to 2 vendors past 45-day payment"
+```
 
 ---
 
-## 🔥 Key Technical Decisions
+## 🗺️ Roadmap
 
-### Why Re-Ranking Layer?
-- Bi-encoders (current): Fast but ~80% accurate
-- Cross-encoders: Slower but ~95% accurate
-- **Solution:** Use bi-encoder for initial search (30 chunks), cross-encoder for final selection (top 5)
-- **Result:** Best of both worlds - speed + accuracy
+### Phase 1: Foundation (Current)
+- [ ] DuckDB integration (Excel → SQL)
+- [ ] Discovery Agent (header mapping)
+- [ ] ChromaDB with GST 2026 rules
+- [ ] Basic LLM integration
 
-### Why Async Processing?
-- Current: Sequential (retrieval → LLM → metrics) = 38s
-- Better: Parallel (retrieve + LLM, metrics in background) = 15-20s
-- **Result:** 50% faster without sacrificing quality
+### Phase 2: Compliance Engine
+- [ ] Compliance Agent (ITC verification)
+- [ ] Section 43B(h) monitoring
+- [ ] Section 17(5) blocked credit detection
+- [ ] GSTR reconciliation
 
-### Why Hierarchical Chunking?
-- Problem: Small chunks = good matches but lack context
-- Solution: Search small chunks, return large parents to LLM
-- **Result:** Precise retrieval + full context = better answers
+### Phase 3: Strategic Intelligence
+- [ ] Strategist Agent
+- [ ] Vendor ranking system
+- [ ] Cash flow forecasting
+- [ ] Profit optimization
 
-### Why NOT Agentic System (Yet)?
-- Don't have accounting data yet
-- Function calling covers 80% of use cases
-- Simpler to build, debug, and maintain
-- Can add agents later if genuinely needed
+### Phase 4: Production
+- [ ] Web UI
+- [ ] Multi-company support
+- [ ] Report generation (GSTR-1, GSTR-3B)
+- [ ] Audit trail
 
 ---
 
-## 🎯 Success Metrics
+## 🎯 Design Principles
 
-### Phase 1 Targets (2-4 weeks):
-- ✅ Local execution
-- ✅ 485 optimized chunks
-- ✅ 88% document coverage
-- ✅ Hybrid search implemented
-- ✅ Cross-page chunking fixed
-- 🔄 <5s response time (currently 38s)
-- 🔄 >70% faithfulness (currently 57%)
-- 🔄 >85% pass rate (currently 40%)
+1. **Agents over Chatbots** — Autonomous task execution, not just Q&A
+2. **SQL over Embeddings for Data** — DuckDB for financial data, ChromaDB for rules only
+3. **Local over Cloud** — Privacy-first, $0 cost
+4. **Python Calculates, LLM Reasons** — Never let LLM do arithmetic
+5. **Ask, Don't Guess** — Clarify unknown data rather than hallucinate
+
+---
+
+## 📚 Knowledge Sources
+
+| Source | Purpose | Storage |
+|--------|---------|---------|
+| GST Act 2017 | Tax rules, sections, definitions | ChromaDB |
+| CGST Rules 2017 | Procedural requirements | ChromaDB |
+| GST 2026 Notifications | Rate changes, exemptions | ChromaDB |
+| User Excel/CSV | Actual financial data | DuckDB |
 
 ---
 
 ## 🤝 Contributing
 
-**Current needs:**
-- 🧪 Testing with real GST questions
-- 📜 More GST documents (IGST Act, Circulars)
-- 💼 Accounting domain expertise
-- 🐛 Bug reports and feature requests
+This is an active development project. Core philosophy:
+- Keep it simple
+- Local-first, privacy-first
+- Agents that actually work, not demos
 
 ---
 
-## 📄 License
+**Status:** 🚧 Rebuilding with Agentic Architecture  
+**Philosophy:** Autonomous AI CFO > Chatbot  
+**Stack:** Ollama + DuckDB + ChromaDB + LangGraph
 
-MIT License - see [LICENSE](LICENSE) for details.
-
----
-
-**Building the foundation, one optimization at a time. 🚀**
-
-*Last Updated: January 2, 2026*  
-*Phase 1: 75% Complete*  
-*Next: Re-ranking layer + Async processing → Production-ready*
+*Last Updated: January 5, 2026*
