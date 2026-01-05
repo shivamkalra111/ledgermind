@@ -1,0 +1,52 @@
+sac_code,service_name,category,gst_rate,effective_from,condition,notes
+9992,Education Services,education,0,2025-09-22,Recognized institutions,Exempt
+9993,Healthcare Services,healthcare,0,2025-09-22,Clinical establishments,Exempt
+997131,Life Insurance,insurance,0,2025-09-22,Pure term life,Exempt - 2025 Reform
+997133,Health Insurance,insurance,0,2025-09-22,,Exempt - 2025 Reform
+9965,Public Transport (Metro/Bus/Train),transport,0,2025-09-22,Public transport,Exempt
+9972,Residential Rent,real_estate,0,2025-09-22,Residential property,Exempt
+9954,Affordable Housing,real_estate,0,2025-09-22,Under PMAY,Exempt
+9991,Government Services,government,0,2025-09-22,Sovereign functions,Exempt
+9963,Hotel Stay (Below ₹7500),hospitality,5,2025-09-22,Tariff < ₹7500/day,Merit Rate
+9963,Restaurant (Non-AC),hospitality,5,2025-09-22,Without ITC,Merit Rate
+9996,Gym/Fitness Services,wellness,5,2025-09-22,,Merit Rate - 2025 Reform
+9997,Salon/Beauty Services,wellness,5,2025-09-22,,Merit Rate - 2025 Reform
+9988,Job Work (Manufacturing),manufacturing,5,2025-09-22,For registered person,Merit Rate
+9965,Goods Transport (GTA),transport,5,2025-09-22,Without ITC,Merit Rate - Option A
+9966,Passenger Transport (Non-AC),transport,5,2025-09-22,Non-AC bus/cab,Merit Rate
+9967,Courier/Postal Services,logistics,5,2025-09-22,,Merit Rate - 2025 Reform
+9985,Housekeeping Services,services,5,2025-09-22,,Merit Rate
+9986,Event Management (Small),entertainment,5,2025-09-22,Value < ₹2.5L,Merit Rate
+9965,Goods Transport (GTA with ITC),transport,12,2025-09-22,With ITC,Intermediate Rate
+9964,Air Travel (Economy),transport,5,2025-09-22,Economy class,Merit Rate
+9967,Tour Operator Services,travel,5,2025-09-22,Without ITC,Merit Rate
+9971,Banking Services,financial,18,2025-09-22,,Standard Rate
+9971,Insurance (General),insurance,18,2025-09-22,Except Health/Life,Standard Rate
+9971,Stock Broking,financial,18,2025-09-22,,Standard Rate
+9972,Commercial Rent,real_estate,18,2025-09-22,Commercial property,Standard Rate
+9954,Construction Services,construction,18,2025-09-22,Commercial,Standard Rate
+9982,Legal Services,professional,18,2025-09-22,,Standard Rate
+9982,Accounting/Audit Services,professional,18,2025-09-22,,Standard Rate
+9983,IT/Software Services,technology,18,2025-09-22,,Standard Rate
+9983,Consulting Services,professional,18,2025-09-22,,Standard Rate
+9983,Management Services,professional,18,2025-09-22,,Standard Rate
+9983,Advertising/Marketing,media,18,2025-09-22,,Standard Rate
+9984,Telecom Services,telecom,18,2025-09-22,,Standard Rate
+9973,IP/Licensing Services,technology,18,2025-09-22,,Standard Rate
+9981,R&D Services,technology,18,2025-09-22,,Standard Rate
+9963,Hotel Stay (₹7500 and above),hospitality,18,2025-09-22,Tariff >= ₹7500,Standard Rate
+9963,Restaurant (AC/5-star),hospitality,18,2025-09-22,With ITC,Standard Rate
+9964,Air Travel (Business Class),transport,12,2025-09-22,Business/First,Intermediate Rate
+9966,Passenger Transport (AC),transport,18,2025-09-22,AC cab/bus,Standard Rate
+9968,Warehousing Services,logistics,18,2025-09-22,,Standard Rate
+9995,Membership Services,services,18,2025-09-22,,Standard Rate
+9996,Recreational Services,entertainment,18,2025-09-22,,Standard Rate
+9986,Event Management,entertainment,18,2025-09-22,,Standard Rate
+9987,Maintenance/Repair Services,services,18,2025-09-22,,Standard Rate
+9989,Manufacturing Services,manufacturing,18,2025-09-22,On job work basis,Standard Rate
+9997,Other Personal Services,services,18,2025-09-22,,Standard Rate
+9996,"Casino, Gambling",entertainment,28,2025-09-22,,Luxury - 2023 Amendment
+9996,Horse Racing,entertainment,28,2025-09-22,,Luxury
+9996,Online Gaming (Money),entertainment,28,2025-09-22,Real money gaming,Luxury - 2023 Amendment
+9996,Lottery Services,entertainment,28,2025-09-22,,Luxury
+

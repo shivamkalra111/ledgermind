@@ -13,11 +13,12 @@ from enum import Enum
 from dataclasses import dataclass
 from typing import Optional, List, Tuple
 
-from config import (
+from core.reference_data import (
     load_goods_rates,
     load_services_rates,
     get_rate_for_hsn,
     get_rate_for_sac,
+    search_rate_by_name,
 )
 
 

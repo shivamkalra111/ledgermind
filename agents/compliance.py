@@ -10,12 +10,8 @@ from datetime import date, timedelta
 from core.data_engine import DataEngine
 from core.knowledge import KnowledgeBase
 from llm.client import LLMClient
-from config import (
-    COMPLIANCE_OVERDUE_DAYS,
-    COMPLIANCE_PROMPT,
-    get_gst_slabs,
-    get_compliance_rules
-)
+from config import COMPLIANCE_OVERDUE_DAYS, COMPLIANCE_PROMPT
+from core.reference_data import get_gst_slabs, get_compliance_rules
 
 
 @dataclass

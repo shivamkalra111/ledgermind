@@ -148,7 +148,7 @@ class TestDataPipeline:
     
     def test_reference_data_loads(self):
         """Test that reference data loads correctly."""
-        from config import load_goods_rates, load_services_rates
+        from core.reference_data import load_goods_rates, load_services_rates
         
         goods = load_goods_rates()
         services = load_services_rates()

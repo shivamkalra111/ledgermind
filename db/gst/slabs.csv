@@ -1,0 +1,6 @@
+slab_name,rate,description,examples
+exempt,0,Essential goods and services,Fresh milk; Education; Healthcare
+merit,5,Mass consumption goods,Packaged food; Economy hotels; Transport
+standard,18,Standard rate for most goods/services,Most goods; Restaurants; IT services
+luxury,28,Luxury and sin goods,Luxury cars; Tobacco; Aerated drinks
+

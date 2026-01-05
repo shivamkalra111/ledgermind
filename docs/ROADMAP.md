@@ -2,7 +2,8 @@
 
 > End-to-end technical roadmap for the Agentic AI CFO Platform
 
-**Last Updated:** January 2026
+**Last Updated:** January 2026  
+**Current Phase:** 1 Complete ✅ | Phase 2 Next
 
 ---
 
@@ -33,6 +34,7 @@ Build an **autonomous AI CFO** for MSMEs that:
 │  │ 3 Agents│──────│ Verify  │──────│ Predict │──────│ API     │           │
 │  │ Query   │      │ ITC     │      │ Vendor  │      │ Deploy  │           │
 │  │ Classify│      │ 43B(h)  │      │ Score   │      │         │           │
+│  │ Tests   │      │         │      │         │      │         │           │
 │  └─────────┘      └─────────┘      └─────────┘      └─────────┘           │
 │                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
@@ -46,11 +48,12 @@ Build an **autonomous AI CFO** for MSMEs that:
 
 | Metric | Target | Achieved |
 |--------|--------|----------|
-| Core Modules | 14 | ✅ 14 |
-| Reference Data | 3 CSVs | ✅ 5 files |
+| Core Modules | 14 | ✅ 15 |
+| Reference Data Files | 3 | ✅ 6 |
 | Knowledge Chunks | 500+ | ✅ 1,276 |
 | Guardrails | 5 | ✅ 10 |
 | Agents | 3 | ✅ 3 |
+| Tests | 50+ | ✅ 121 |
 
 ### What Was Built
 
@@ -60,6 +63,7 @@ Build an **autonomous AI CFO** for MSMEs that:
 |------|---------|--------|
 | `core/data_engine.py` | DuckDB integration - Excel as SQL | ✅ |
 | `core/knowledge.py` | ChromaDB RAG for legal documents | ✅ |
+| `core/reference_data.py` | CSV data loading (clean separation) | ✅ |
 | `core/query_classifier.py` | Routes queries to correct knowledge source | ✅ |
 | `core/guardrails.py` | Input validation, safety checks | ✅ |
 | `core/metrics.py` | Performance tracking | ✅ |
@@ -74,46 +78,66 @@ Build an **autonomous AI CFO** for MSMEs that:
 | `agents/compliance.py` | Tax compliance checking framework | ✅ |
 | `agents/strategist.py` | Strategic analysis framework | ✅ |
 
-#### Orchestration
+#### Reference Data (db/)
 
-| File | Purpose | Status |
-|------|---------|--------|
-| `orchestration/router.py` | Intent classification | ✅ |
-| `orchestration/workflow.py` | Agent coordination with query routing | ✅ |
+| Path | Contents | Records |
+|------|----------|---------|
+| `db/gst/slabs.csv` | Rate slab definitions | 4 |
+| `db/gst/goods_hsn.csv` | HSN codes with rates | 89 |
+| `db/gst/services_sac.csv` | SAC codes with rates | 50 |
+| `db/gst/blocked_itc.csv` | Section 17(5) items | 15 |
+| `db/msme/classification.csv` | MSME thresholds | 3 |
+| `db/india/state_codes.csv` | GST state codes | 38 |
 
-#### Reference Data
+#### Test Suite
 
-| File | Contents | Status |
-|------|----------|--------|
-| `db/gst_rates/goods_rates_2025.csv` | 89 HSN codes with rates | ✅ |
-| `db/gst_rates/services_rates_2025.csv` | 50 SAC codes with rates | ✅ |
-| `db/gst_rates/blocked_credits_17_5.csv` | 15 Section 17(5) items | ✅ |
-| `db/msme_classification.csv` | Micro/Small/Medium thresholds | ✅ |
-| `db/state_codes.csv` | 38 GST state codes | ✅ |
+| File | Tests | Coverage |
+|------|-------|----------|
+| `test_config.py` | 10 | Config paths, settings |
+| `test_reference_data.py` | 19 | CSV loading, lookups |
+| `test_guardrails.py` | 17 | All validations |
+| `test_query_classifier.py` | 20 | Query routing |
+| `test_data_engine.py` | 8 | DuckDB ops |
+| `test_knowledge.py` | 7 | ChromaDB search |
+| `test_agents.py` | 10 | Agent init |
+| `test_orchestration.py` | 10 | Router, workflow |
+| `test_integration.py` | 20 | End-to-end |
+| **Total** | **121** | |
 
-#### Knowledge Base
+### Key Technical Achievements
 
-| Source | Chunks | Status |
-|--------|--------|--------|
-| CGST Act 2017 | 601 | ✅ |
-| CGST Rules 2017 | 675 | ✅ |
-| **Total** | **1,276** | ✅ |
+#### 1. Clean Separation of Concerns
 
-### Technical Achievements
+```
+config.py           → Paths, settings, prompts ONLY
+core/reference_data.py → Data loading, rate lookups
+```
 
-#### Query Classifier (Proper Architecture)
-
-Instead of hardcoded Q&A, we built a proper knowledge routing system:
+#### 2. Query Classification System
 
 ```python
-# core/query_classifier.py classifies queries:
 "What is CGST?"        → DEFINITION    → LLM general knowledge
 "GST rate on milk?"    → RATE_LOOKUP   → CSV lookup
 "Due date for GSTR-3B" → LEGAL_RULE    → ChromaDB RAG
 "My total sales"       → DATA_QUERY    → DuckDB
 ```
 
-#### Guardrails (10 Methods)
+#### 3. Production-Grade db/ Structure
+
+```
+db/
+├── gst/              # All GST-related data
+│   ├── slabs.csv
+│   ├── goods_hsn.csv
+│   ├── services_sac.csv
+│   └── blocked_itc.csv
+├── msme/             # MSME classification
+│   └── classification.csv
+└── india/            # India-specific
+    └── state_codes.csv
+```
+
+#### 4. Guardrails (10 Methods)
 
 ```python
 # Input validation
@@ -124,25 +148,13 @@ validate_date()            # Date validity
 validate_amount()          # Amount bounds
 
 # Business rules
-validate_tax_calculation() # CGST + SGST = Total
+validate_tax_calculation() # taxable + taxes = total
 validate_itc_time_limit()  # Section 16(4)
 validate_section_43b_h()   # 45-day MSME payment
 
 # LLM safety
 validate_llm_response_no_math()       # No arithmetic
 validate_llm_response_has_citation()  # Sources required
-```
-
-### Test Results
-
-```
-✅ All 14 modules import successfully
-✅ Reference data: 89 goods, 50 services, 15 blocked
-✅ ChromaDB: 1,276 chunks searchable
-✅ DuckDB: Connected with 3 tables
-✅ Guardrails: 10 validation methods
-✅ Query Classifier: 4 types correctly classified
-✅ LLM: Ollama connected
 ```
 
 ---
@@ -166,7 +178,6 @@ Build the actual compliance checking logic that makes LedgerMind valuable.
 #### 2.1 Tax Rate Verification
 
 ```python
-# Implement in agents/compliance.py
 def check_tax_rates(self) -> List[ComplianceIssue]:
     """Compare charged GST rate against correct rate from db/."""
     
@@ -209,36 +220,8 @@ def check_section_43b_h(self) -> List[ComplianceIssue]:
                     issue_type="section_43b_h",
                     severity="critical",
                     description=f"Payment to {purchase.vendor_name} overdue by {days_since - 45} days",
-                    amount_impact=purchase.total_value,  # Disallowed expense
+                    amount_impact=purchase.total_value,
                     recommendation="Pay within 45 days to claim expense deduction"
-                ))
-    
-    return issues
-```
-
-#### 2.3 Section 17(5) Detection
-
-```python
-def check_blocked_credits(self) -> List[ComplianceIssue]:
-    """Detect ITC claims on blocked items."""
-    
-    blocked_items = load_blocked_credits()  # From db/gst_rates/blocked_credits_17_5.csv
-    
-    purchases = self.data_engine.query("""
-        SELECT * FROM sdm_purchase_ledger
-        WHERE cgst_amount > 0 OR sgst_amount > 0
-    """)
-    
-    issues = []
-    for purchase in purchases:
-        for blocked in blocked_items:
-            if blocked['keyword'] in purchase.description.lower():
-                issues.append(ComplianceIssue(
-                    issue_type="blocked_credit",
-                    severity="warning",
-                    description=f"ITC on '{purchase.description}' blocked under Section 17(5)",
-                    amount_impact=purchase.cgst_amount + purchase.sgst_amount,
-                    reference=f"Section 17(5): {blocked['reason']}"
                 ))
     
     return issues
@@ -304,6 +287,9 @@ class VendorScore:
 - [x] Query classifier routes to correct source
 - [x] Guardrails validate inputs
 - [x] CLI works end-to-end
+- [x] 121 tests passing
+- [x] Clean code structure (config vs reference_data)
+- [x] Production-grade db/ folder organization
 
 ### Phase 2 (Next)
 
@@ -332,7 +318,7 @@ class VendorScore:
 
 1. **Implement `check_tax_rates()`**
    - Load transactions from DuckDB
-   - Look up correct rate from CSV
+   - Look up correct rate from `db/gst/goods_hsn.csv`
    - Flag mismatches with amount impact
 
 2. **Implement `check_section_43b_h()`**
@@ -348,6 +334,9 @@ class VendorScore:
 ### Commands to Test
 
 ```bash
+# Run all tests (should pass 121)
+pytest tests/ -v
+
 # Analyze sample data
 python main.py "analyze folder workspace/sample_company/"
 
@@ -360,11 +349,25 @@ python main.py "What is Section 43B(h)?"
 
 ---
 
+## Project Statistics
+
+| Metric | Value |
+|--------|-------|
+| **Python Files** | 25+ |
+| **Lines of Code** | ~5,000 |
+| **Tests** | 121 |
+| **CSV Data Files** | 6 |
+| **Reference Data Records** | 200+ |
+| **ChromaDB Chunks** | 1,276 |
+
+---
+
 ## Resources
 
 ### Documentation
 - [ARCHITECTURE.md](./ARCHITECTURE.md) - Technical architecture
 - [README.md](../README.md) - Project overview
+- [db/README.md](../db/README.md) - Reference data documentation
 
 ### External References
 - [CBIC GST Portal](https://cbic-gst.gov.in/)

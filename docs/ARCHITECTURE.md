@@ -3,7 +3,8 @@
 > Complete technical documentation for the Agentic AI CFO Platform
 
 **Last Updated:** January 2026  
-**Phase:** 1 (Foundation) ✅ Complete
+**Phase:** 1 (Foundation) ✅ Complete  
+**Tests:** 121 Passing
 
 ---
 
@@ -18,6 +19,7 @@ LedgerMind is an **autonomous financial intelligence platform** built on a multi
 3. **Local-First** — All processing on user's machine, $0 cloud cost
 4. **Math Safety** — LLM reasons, Python/SQL calculates
 5. **Proper Knowledge Routing** — Each knowledge layer serves its purpose
+6. **Clean Separation** — Config for settings, reference_data for loading
 
 ---
 
@@ -32,11 +34,11 @@ LedgerMind is an **autonomous financial intelligence platform** built on a multi
 │                                                                         │
 │  LAYER 1: REFERENCE DATA (Facts that change with policy)               │
 │  ─────────────────────────────────────────────────────                 │
-│  Source: db/*.csv, db/*.json                                           │
+│  Source: db/**/*.csv                                                    │
 │  Purpose: Rate lookups, code validation, thresholds                    │
 │  Examples: GST rates, MSME limits, state codes                         │
 │                                                                         │
-│  → Queried via: Direct CSV/JSON lookup                                 │
+│  → Queried via: core/reference_data.py                                 │
 │                                                                         │
 ├─────────────────────────────────────────────────────────────────────────┤
 │                                                                         │
@@ -46,7 +48,7 @@ LedgerMind is an **autonomous financial intelligence platform** built on a multi
 │  Purpose: RAG for specific legal questions                             │
 │  Examples: CGST Act, Rules, Notifications                              │
 │                                                                         │
-│  → Queried via: ChromaDB semantic search                               │
+│  → Queried via: core/knowledge.py                                      │
 │                                                                         │
 ├─────────────────────────────────────────────────────────────────────────┤
 │                                                                         │
@@ -129,12 +131,12 @@ User Question
 │  └─────────────────┘    └─────────────────┘    └─────────────────┘         │
 │                                                                             │
 │  ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐         │
-│  │   GUARDRAILS    │    │    METRICS      │    │ QUERY CLASSIFIER│         │
-│  │ (guardrails.py) │    │  (metrics.py)   │    │ (classifier.py) │         │
+│  │ REFERENCE DATA  │    │   GUARDRAILS    │    │    METRICS      │         │
+│  │(reference_data) │    │ (guardrails.py) │    │  (metrics.py)   │         │
 │  │                 │    │                 │    │                 │         │
-│  │ • GSTIN check   │    │ • Performance   │    │ • Route queries │         │
-│  │ • Tax math      │    │ • Compliance    │    │ • Detect type   │         │
-│  │ • LLM safety    │    │ • Tracking      │    │ • Extract info  │         │
+│  │ • Load CSV      │    │ • GSTIN check   │    │ • Performance   │         │
+│  │ • Rate lookup   │    │ • Tax math      │    │ • Compliance    │         │
+│  │ • MSME limits   │    │ • LLM safety    │    │ • Tracking      │         │
 │  └─────────────────┘    └─────────────────┘    └─────────────────┘         │
 └─────────────────────────────────────────────────────────────────────────────┘
                                       │
@@ -146,10 +148,10 @@ User Question
 │  │    db/          │    │   knowledge/    │    │   workspace/    │         │
 │  │ (Reference Data)│    │ (PDFs for RAG)  │    │ (User's Data)   │         │
 │  │                 │    │                 │    │                 │         │
-│  │ • GST rates CSV │    │ • CGST Act PDF  │    │ • Excel files   │         │
-│  │ • MSME limits   │    │ • CGST Rules    │    │ • CSV files     │         │
-│  │ • State codes   │    │ • Accounting    │    │ • Discovery     │         │
-│  │ • Blocked ITC   │    │   standards     │    │   metadata      │         │
+│  │ db/gst/         │    │ • CGST Act PDF  │    │ • Excel files   │         │
+│  │ db/msme/        │    │ • CGST Rules    │    │ • CSV files     │         │
+│  │ db/india/       │    │ • Accounting    │    │ • Discovery     │         │
+│  │                 │    │   standards     │    │   metadata      │         │
 │  └─────────────────┘    └─────────────────┘    └─────────────────┘         │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -158,12 +160,10 @@ User Question
 
 ## 4. Complete File Structure
 
-### Directory Overview
-
 ```
 ledgermind/
 ├── 🎯 main.py                      # Entry point - CLI interface
-├── ⚙️  config.py                    # Configuration and settings
+├── ⚙️  config.py                    # Configuration ONLY (paths, settings)
 ├── 📋 requirements.txt             # Python dependencies
 │
 ├── 🤖 agents/                      # AI Agents (business logic)
@@ -176,7 +176,8 @@ ledgermind/
 │   ├── __init__.py
 │   ├── data_engine.py              # DuckDB integration
 │   ├── knowledge.py                # ChromaDB RAG
-│   ├── query_classifier.py         # Query routing (NEW)
+│   ├── reference_data.py           # CSV data loading (Layer 1)
+│   ├── query_classifier.py         # Query routing
 │   ├── guardrails.py               # Safety validations
 │   ├── metrics.py                  # Performance tracking
 │   ├── schema.py                   # Data models (SDM)
@@ -191,14 +192,17 @@ ledgermind/
 │   ├── __init__.py
 │   └── client.py                   # Ollama client
 │
-├── 📊 db/                          # Reference data (Layer 1)
-│   ├── gst_rates_2025.json         # Master GST data
-│   ├── gst_rates/
-│   │   ├── goods_rates_2025.csv    # HSN → rate mapping
-│   │   ├── services_rates_2025.csv # SAC → rate mapping
-│   │   └── blocked_credits_17_5.csv# Section 17(5) items
-│   ├── msme_classification.csv     # MSME thresholds
-│   └── state_codes.csv             # GST state codes
+├── 📊 db/                          # Reference data (Layer 1) - CSVs ONLY
+│   ├── README.md                   # Data documentation
+│   ├── gst/                        # GST-related reference data
+│   │   ├── slabs.csv               # Rate slabs (0%, 5%, 18%, 28%)
+│   │   ├── goods_hsn.csv           # HSN → rate mapping (89 items)
+│   │   ├── services_sac.csv        # SAC → rate mapping (50 services)
+│   │   └── blocked_itc.csv         # Section 17(5) items (15)
+│   ├── msme/                       # MSME classification
+│   │   └── classification.csv      # Micro/Small/Medium thresholds
+│   └── india/                      # India-specific data
+│       └── state_codes.csv         # GST state codes (38)
 │
 ├── 📚 knowledge/                   # PDFs for RAG (Layer 2)
 │   ├── gst/
@@ -208,6 +212,19 @@ ledgermind/
 │
 ├── 📂 workspace/                   # User data
 │   └── sample_company/             # Sample test data
+│
+├── 🧪 tests/                       # Test suite (121 tests)
+│   ├── __init__.py
+│   ├── conftest.py                 # Shared fixtures
+│   ├── test_config.py              # Config path tests
+│   ├── test_reference_data.py      # Data loading tests
+│   ├── test_guardrails.py          # Validation tests
+│   ├── test_query_classifier.py    # Query routing tests
+│   ├── test_data_engine.py         # DuckDB tests
+│   ├── test_knowledge.py           # ChromaDB tests
+│   ├── test_agents.py              # Agent tests
+│   ├── test_orchestration.py       # Workflow tests
+│   └── test_integration.py         # End-to-end tests
 │
 ├── 🔧 scripts/                     # Utility scripts
 │   ├── create_sample_data.py       # Generate test data
@@ -231,7 +248,20 @@ ledgermind/
 | File | Purpose | Why It Exists |
 |------|---------|---------------|
 | `main.py` | CLI entry point | User interacts with system here |
-| `config.py` | Central configuration | Single source for all settings |
+| `config.py` | Paths and settings ONLY | Single source for configuration |
+
+### Core Infrastructure (`core/`)
+
+| File | Purpose | Why It Exists |
+|------|---------|---------------|
+| `data_engine.py` | DuckDB wrapper - Excel as SQL | Fast analytics on user's financial data |
+| `knowledge.py` | ChromaDB wrapper - RAG for rules | Legal questions need document search |
+| `reference_data.py` | Load CSV data, rate lookups | **Clean separation from config** |
+| `query_classifier.py` | Routes queries to correct source | Each knowledge layer serves its purpose |
+| `guardrails.py` | Validation & safety checks | Prevent bad data, LLM hallucinations |
+| `metrics.py` | Performance & compliance tracking | Monitor system health |
+| `schema.py` | Standard Data Model definitions | Normalize different Excel formats |
+| `mapper.py` | Header mapping logic | Map "Inv. No." → "invoice_number" |
 
 ### Agents (`agents/`)
 
@@ -241,49 +271,31 @@ ledgermind/
 | `compliance.py` | Checks tax compliance issues | Core value - find savings/risks |
 | `strategist.py` | Vendor analysis, cash flow forecasting | Strategic business insights |
 
-### Core Infrastructure (`core/`)
-
-| File | Purpose | Why It Exists |
-|------|---------|---------------|
-| `data_engine.py` | DuckDB wrapper - Excel as SQL | Fast analytics on user's financial data |
-| `knowledge.py` | ChromaDB wrapper - RAG for rules | Legal questions need document search |
-| `query_classifier.py` | Routes queries to correct source | **Each knowledge layer serves its purpose** |
-| `guardrails.py` | Validation & safety checks | Prevent bad data, LLM hallucinations |
-| `metrics.py` | Performance & compliance tracking | Monitor system health |
-| `schema.py` | Standard Data Model definitions | Normalize different Excel formats |
-| `mapper.py` | Header mapping logic | Map "Inv. No." → "invoice_number" |
-
-### Orchestration (`orchestration/`)
-
-| File | Purpose | Why It Exists |
-|------|---------|---------------|
-| `router.py` | Classify user intent | "analyze folder" vs "what is GST" |
-| `workflow.py` | Coordinate agents | Right agent for right task |
-
-### LLM (`llm/`)
-
-| File | Purpose | Why It Exists |
-|------|---------|---------------|
-| `client.py` | Ollama/Qwen wrapper | Local LLM, no cloud dependency |
-
 ### Reference Data (`db/`)
 
-| File | Purpose | Why It Exists |
-|------|---------|---------------|
-| `gst_rates_2025.json` | Master GST data | Central source for rates |
-| `goods_rates_2025.csv` | HSN codes → rates | Look up rate by product |
-| `services_rates_2025.csv` | SAC codes → rates | Look up rate by service |
-| `blocked_credits_17_5.csv` | Section 17(5) list | ITC eligibility check |
-| `msme_classification.csv` | MSME thresholds | Section 43B(h) checks |
-| `state_codes.csv` | GST state codes | GSTIN validation |
+| Path | Contents | Records |
+|------|----------|---------|
+| `db/gst/slabs.csv` | Rate slab definitions | 4 slabs |
+| `db/gst/goods_hsn.csv` | HSN codes → rates | 89 items |
+| `db/gst/services_sac.csv` | SAC codes → rates | 50 services |
+| `db/gst/blocked_itc.csv` | Section 17(5) list | 15 items |
+| `db/msme/classification.csv` | MSME thresholds | 3 categories |
+| `db/india/state_codes.csv` | GST state codes | 38 codes |
 
-### Scripts (`scripts/`)
+### Tests (`tests/`)
 
-| File | Purpose | Why It Exists |
-|------|---------|---------------|
-| `create_sample_data.py` | Generate test Excel/CSV | Testing without real data |
-| `ingest_knowledge.py` | Populate ChromaDB | Load PDFs for RAG |
-| `scrape_gst_rates.py` | Update rates from official source | Keep rates current |
+| File | Tests | What It Covers |
+|------|-------|----------------|
+| `test_config.py` | 10 | Paths exist, settings valid |
+| `test_reference_data.py` | 19 | CSV loading, rate lookups |
+| `test_guardrails.py` | 17 | GSTIN, HSN, tax validation |
+| `test_query_classifier.py` | 20 | Query routing accuracy |
+| `test_data_engine.py` | 8 | DuckDB operations |
+| `test_knowledge.py` | 7 | ChromaDB search |
+| `test_agents.py` | 10 | Agent initialization |
+| `test_orchestration.py` | 10 | Router, workflow |
+| `test_integration.py` | 20 | End-to-end flows |
+| **Total** | **121** | |
 
 ---
 
@@ -298,116 +310,15 @@ ledgermind/
 | `validate_invoice_number` | Check invoice format | Data ingestion |
 | `validate_date` | Check date validity | All date fields |
 | `validate_amount` | Check amount is positive, reasonable | All amounts |
-| `validate_tax_calculation` | Verify CGST+SGST=Total | Tax fields |
+| `validate_tax_calculation` | Verify taxable + taxes = total | Tax fields |
 | `validate_itc_time_limit` | Check ITC not expired | ITC claims |
 | `validate_section_43b_h` | Check MSME payment deadline | Vendor payments |
 | `validate_llm_response_no_math` | Ensure LLM doesn't do arithmetic | LLM outputs |
 | `validate_llm_response_has_citation` | Check LLM cites sources | Legal answers |
 
-### Guardrail Categories
-
-```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                         GUARDRAILS SYSTEM                               │
-├─────────────────────────────────────────────────────────────────────────┤
-│                                                                         │
-│  1. INPUT VALIDATION                                                    │
-│     • GSTIN format check                                                │
-│     • HSN/SAC code validation                                           │
-│     • Invoice number format                                             │
-│     • Date validity                                                     │
-│                                                                         │
-│  2. DATA QUALITY                                                        │
-│     • Amount bounds checking                                            │
-│     • Tax calculation consistency                                       │
-│     • Missing field detection                                           │
-│                                                                         │
-│  3. LLM SAFETY                                                          │
-│     • No arithmetic in responses (math safety)                          │
-│     • Citation required for rules                                       │
-│     • Confidence scoring                                                │
-│                                                                         │
-│  4. BUSINESS RULES                                                      │
-│     • ITC time limits (Section 16(4))                                   │
-│     • Section 43B(h) - 45 day payment                                   │
-│     • Section 17(5) - blocked credits                                   │
-│                                                                         │
-└─────────────────────────────────────────────────────────────────────────┘
-```
-
 ---
 
-## 7. Data Flow Diagrams
-
-### Knowledge Query Flow
-
-```
-User: "What is CGST?"
-         │
-         ▼
-┌────────────────────────────┐
-│ Intent Router              │
-│ → KNOWLEDGE_QUERY          │
-└────────────────────────────┘
-         │
-         ▼
-┌────────────────────────────┐
-│ Query Classifier           │
-│ → Type: DEFINITION         │
-│ → Source: LLM (Layer 3)    │
-└────────────────────────────┘
-         │
-         ▼
-┌────────────────────────────┐
-│ LLM (No context restrict)  │
-│ Use general knowledge      │
-└────────────────────────────┘
-         │
-         ▼
-┌────────────────────────────┐
-│ Response: "CGST is the     │
-│ Central Goods and Services │
-│ Tax collected by..."       │
-└────────────────────────────┘
-```
-
-### Rate Lookup Flow
-
-```
-User: "GST rate on milk?"
-         │
-         ▼
-┌────────────────────────────┐
-│ Query Classifier           │
-│ → Type: RATE_LOOKUP        │
-│ → Source: CSV (Layer 1)    │
-│ → Item: "milk"             │
-└────────────────────────────┘
-         │
-         ▼
-┌────────────────────────────┐
-│ CSV Lookup                 │
-│ goods_rates_2025.csv       │
-│ → HSN: 0401                │
-│ → Rate: 0%                 │
-└────────────────────────────┘
-         │
-         ▼
-┌────────────────────────────┐
-│ LLM formats response       │
-│ with context               │
-└────────────────────────────┘
-         │
-         ▼
-┌────────────────────────────┐
-│ Response: "Fresh milk is   │
-│ GST exempt (0%)..."        │
-└────────────────────────────┘
-```
-
----
-
-## 8. Technology Stack
+## 7. Technology Stack
 
 | Layer | Technology | Purpose |
 |-------|------------|---------|
@@ -418,42 +329,63 @@ User: "GST rate on milk?"
 | **Embeddings** | Default (ChromaDB) | Semantic search |
 | **Framework** | Python 3.10+ | Core language |
 | **CLI** | Rich | Beautiful terminal UI |
+| **Testing** | Pytest | 121 tests |
 
 ---
 
-## 9. Security & Privacy
+## 8. Clean Code Principles
 
-### Data Locality
-- **100% local processing** — No data leaves the machine
-- Ollama runs locally
-- DuckDB is file-based
-- ChromaDB persists to local disk
+### Config vs Reference Data
 
-### Data Separation
-- `workspace/` — User data (transient, per-company)
-- `db/` — Reference data (versioned, shared)
-- `knowledge/` — Legal PDFs (static, shared)
-- `chroma_db/` — Indexed knowledge (regeneratable)
+**Before (Anti-pattern):**
+```python
+# config.py - BAD: Mixed concerns
+GST_SLABS = {"exempt": 0, "merit": 5}  # Hardcoded data
+def load_goods_rates(): ...            # Data loading logic
+```
+
+**After (Clean):**
+```python
+# config.py - GOOD: Only configuration
+GST_SLABS_FILE = DB_DIR / "gst" / "slabs.csv"
+
+# core/reference_data.py - GOOD: Data loading
+def load_gst_slabs() -> List[Dict]:
+    return _load_csv(GST_SLABS_FILE)
+```
+
+### System Prompt
+
+**Before (Anti-pattern):**
+```python
+SYSTEM_PROMPT = """...
+GST 2026 CONTEXT:
+- Slabs: 0%, 5%, 18%, 40%  # Hardcoded rates!
+"""
+```
+
+**After (Clean):**
+```python
+SYSTEM_PROMPT = """...
+For GST rates: Use the rate data provided in context (from our database).
+"""
+```
 
 ---
 
-## 10. Current Status
-
-### Phase 1 Complete ✅
-
-| Component | Status | Test Result |
-|-----------|--------|-------------|
-| DuckDB Data Engine | ✅ | Connected, 3 tables |
-| ChromaDB Knowledge | ✅ | 1,276 chunks |
-| Query Classifier | ✅ | 4 types classified correctly |
-| Guardrails | ✅ | 10 validation methods |
-| 3 Agents | ✅ | All import successfully |
-| LLM Client | ✅ | Ollama connected |
-| Reference Data | ✅ | 89 goods, 50 services |
-
-### Test Command
+## 9. Test Commands
 
 ```bash
+# Run all tests
+pytest tests/ -v
+
+# Run specific module
+pytest tests/test_guardrails.py -v
+
+# Run with coverage
+pytest tests/ --cov=core --cov=agents
+
+# Quick smoke test
 python -c "
 from core.query_classifier import QueryClassifier
 c = QueryClassifier()
@@ -461,6 +393,23 @@ print(c.classify('What is CGST?'))  # → definition, llm
 print(c.classify('GST rate on milk?'))  # → rate_lookup, csv
 "
 ```
+
+---
+
+## 10. Current Status
+
+### Phase 1 Complete ✅
+
+| Component | Status | Details |
+|-----------|--------|---------|
+| DuckDB Data Engine | ✅ | Connected |
+| ChromaDB Knowledge | ✅ | 1,276 chunks |
+| Query Classifier | ✅ | 4 types |
+| Guardrails | ✅ | 10 methods |
+| 3 Agents | ✅ | All working |
+| LLM Client | ✅ | Ollama connected |
+| Reference Data | ✅ | 6 CSV files |
+| Tests | ✅ | 121 passing |
 
 ---
 

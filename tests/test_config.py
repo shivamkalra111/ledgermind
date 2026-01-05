@@ -1,5 +1,5 @@
 """
-Tests for config.py - Configuration and data loading
+Tests for config.py - Configuration paths and settings
 """
 
 import pytest
@@ -30,74 +30,40 @@ class TestConfigPaths:
         assert WORKSPACE_DIR.exists(), f"WORKSPACE_DIR not found: {WORKSPACE_DIR}"
 
 
-class TestGSTDataLoading:
-    """Test GST reference data loading."""
+class TestConfigFiles:
+    """Test that reference data files exist."""
     
-    def test_load_goods_rates(self):
-        from config import load_goods_rates
-        
-        goods = load_goods_rates()
-        assert len(goods) > 0, "No goods rates loaded"
-        assert len(goods) >= 80, f"Expected 80+ goods, got {len(goods)}"
-        
-        # Check structure
-        first = goods[0]
-        assert 'hsn_code' in first
-        assert 'gst_rate' in first
-        assert 'item_name' in first
+    def test_goods_rates_file_exists(self):
+        from config import GOODS_RATES_FILE
+        assert GOODS_RATES_FILE.exists(), f"Goods rates file not found: {GOODS_RATES_FILE}"
     
-    def test_load_services_rates(self):
-        from config import load_services_rates
-        
-        services = load_services_rates()
-        assert len(services) > 0, "No services rates loaded"
-        assert len(services) >= 40, f"Expected 40+ services, got {len(services)}"
-        
-        # Check structure
-        first = services[0]
-        assert 'sac_code' in first
-        assert 'gst_rate' in first
-        assert 'service_name' in first
+    def test_services_rates_file_exists(self):
+        from config import SERVICES_RATES_FILE
+        assert SERVICES_RATES_FILE.exists(), f"Services rates file not found: {SERVICES_RATES_FILE}"
     
-    def test_load_blocked_credits(self):
-        from config import load_blocked_credits
-        
-        blocked = load_blocked_credits()
-        assert len(blocked) > 0, "No blocked credits loaded"
-        assert len(blocked) >= 10, f"Expected 10+ blocked items, got {len(blocked)}"
+    def test_msme_file_exists(self):
+        from config import MSME_FILE
+        assert MSME_FILE.exists(), f"MSME file not found: {MSME_FILE}"
     
-    def test_get_rate_for_hsn(self):
-        from config import get_rate_for_hsn
-        
-        # Fresh milk - should be 0%
-        milk = get_rate_for_hsn('0401')
-        assert milk is not None, "HSN 0401 (milk) not found"
-        assert int(milk['rate']) == 0, f"Milk should be 0%, got {milk['rate']}%"
-    
-    def test_get_rate_for_sac(self):
-        from config import get_rate_for_sac
-        
-        # Education - should be 0%
-        education = get_rate_for_sac('9992')
-        assert education is not None, "SAC 9992 (education) not found"
-        assert int(education['rate']) == 0, f"Education should be 0%, got {education['rate']}%"
+    def test_state_codes_file_exists(self):
+        from config import STATE_CODES_FILE
+        assert STATE_CODES_FILE.exists(), f"State codes file not found: {STATE_CODES_FILE}"
 
 
-class TestGSTDataFile:
-    """Test master GST data JSON file."""
+class TestConfigSettings:
+    """Test configuration settings have valid values."""
     
-    def test_gst_data_file_exists(self):
-        from config import GST_DATA_FILE
-        assert GST_DATA_FILE.exists(), f"GST data file not found: {GST_DATA_FILE}"
+    def test_llm_model_set(self):
+        from config import LLM_MODEL
+        assert LLM_MODEL is not None
+        assert len(LLM_MODEL) > 0
     
-    def test_get_gst_data(self):
-        from config import get_gst_data
-        
-        data = get_gst_data()
-        assert data is not None
-        assert 'slabs' in data or len(data) > 0
+    def test_chunk_size_valid(self):
+        from config import CHUNK_SIZE, CHUNK_OVERLAP
+        assert CHUNK_SIZE > 0
+        assert CHUNK_OVERLAP > 0
+        assert CHUNK_OVERLAP < CHUNK_SIZE
 
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
-

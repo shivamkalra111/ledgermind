@@ -4,7 +4,8 @@
 
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Status: Phase 1](https://img.shields.io/badge/status-Phase%201-orange.svg)]()
+[![Tests: 121 Passing](https://img.shields.io/badge/tests-121%20passing-brightgreen.svg)]()
+[![Status: Phase 1](https://img.shields.io/badge/status-Phase%201%20Complete-success.svg)]()
 
 ---
 
@@ -91,6 +92,7 @@ Think of LedgerMind as having **3 AI employees** working for you:
 - *"When should I file GSTR-3B?"*
 - *"What is Section 43B(h)?"*
 - *"Can I claim ITC on office furniture?"*
+- *"What is the GST rate on laptops?"*
 
 ### Compliance Checks
 - *"Run a compliance check"*
@@ -99,62 +101,7 @@ Think of LedgerMind as having **3 AI employees** working for you:
 
 ---
 
-## 🏗️ System Architecture (For the Curious)
-
-```
-┌──────────────────────────────────────────────────────────────────────┐
-│                         USER INTERFACE                               │
-│                    (Command Line / Terminal)                         │
-└──────────────────────────────────┬───────────────────────────────────┘
-                                   │
-                                   ▼
-┌──────────────────────────────────────────────────────────────────────┐
-│                      ORCHESTRATION LAYER                             │
-│  ┌────────────────┐    ┌─────────────────────────────────────────┐  │
-│  │ Intent Router  │───▶│ Workflow Engine                         │  │
-│  │                │    │ (Coordinates which agent does what)     │  │
-│  │ "What does the │    └─────────────────────────────────────────┘  │
-│  │  user want?"   │                                                  │
-│  └────────────────┘                                                  │
-└──────────────────────────────────┬───────────────────────────────────┘
-                                   │
-            ┌──────────────────────┼──────────────────────┐
-            ▼                      ▼                      ▼
-┌───────────────────┐  ┌───────────────────┐  ┌───────────────────┐
-│  DISCOVERY AGENT  │  │  COMPLIANCE AGENT │  │  STRATEGIST AGENT │
-│                   │  │                   │  │                   │
-│  • Read Excel/CSV │  │  • Tax rate check │  │  • Vendor ranking │
-│  • Map headers    │  │  • ITC validation │  │  • Cash forecast  │
-│  • Create tables  │  │  • 43B(h) alerts  │  │  • Profit analysis│
-└─────────┬─────────┘  └─────────┬─────────┘  └─────────┬─────────┘
-          │                      │                      │
-          └──────────────────────┼──────────────────────┘
-                                 │
-┌────────────────────────────────┴─────────────────────────────────────┐
-│                           CORE LAYER                                 │
-│                                                                      │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐ │
-│  │ Data Engine │  │ Knowledge   │  │ Guardrails  │  │   Metrics   │ │
-│  │  (DuckDB)   │  │    Base     │  │  (Safety)   │  │  (Tracking) │ │
-│  │             │  │ (ChromaDB)  │  │             │  │             │ │
-│  │ Your Excel  │  │ GST PDFs &  │  │ Validates   │  │ Tracks      │ │
-│  │ as Database │  │ Tax Rules   │  │ all inputs  │  │ performance │ │
-│  └─────────────┘  └─────────────┘  └─────────────┘  └─────────────┘ │
-│                                                                      │
-└──────────────────────────────────────────────────────────────────────┘
-                                 │
-                                 ▼
-┌──────────────────────────────────────────────────────────────────────┐
-│                         AI BRAIN (LOCAL)                             │
-│                                                                      │
-│         🧠 Qwen 2.5 (7B) running via Ollama on YOUR computer         │
-│                     (No internet required)                           │
-└──────────────────────────────────────────────────────────────────────┘
-```
-
----
-
-## 📁 Project Structure (What's Inside)
+## 📁 Project Structure
 
 ```
 ledgermind/
@@ -164,9 +111,11 @@ ledgermind/
 │   ├── compliance.py              # Checks tax rules
 │   └── strategist.py              # Gives business advice
 │
-├── ⚙️ core/                       # The engine room
+├── ⚙️ core/                        # The engine room
 │   ├── data_engine.py             # Turns Excel into searchable database
 │   ├── knowledge.py               # Stores GST rules for quick lookup
+│   ├── reference_data.py          # Loads tax rates from CSV files
+│   ├── query_classifier.py        # Routes questions to right source
 │   ├── guardrails.py              # Safety checks (validates GSTINs, etc.)
 │   ├── metrics.py                 # Tracks system performance
 │   ├── schema.py                  # Standard format for all data
@@ -180,11 +129,16 @@ ledgermind/
 │   └── client.py                  # Talks to the Ollama AI model
 │
 ├── 📊 db/                         # Reference data (pre-loaded)
-│   ├── gst_rates/                 # Tax rates for 89 goods + 50 services
-│   │   ├── goods_rates_2025.csv   # GST on products (HSN codes)
-│   │   └── services_rates_2025.csv# GST on services (SAC codes)
-│   ├── msme_classification.csv    # Micro/Small/Medium limits
-│   └── state_codes.csv            # All Indian state GST codes
+│   ├── README.md                  # Documentation for data files
+│   ├── gst/                       # GST-related data
+│   │   ├── slabs.csv              # Rate slabs (0%, 5%, 18%, 28%)
+│   │   ├── goods_hsn.csv          # GST on 89 products (HSN codes)
+│   │   ├── services_sac.csv       # GST on 50 services (SAC codes)
+│   │   └── blocked_itc.csv        # Section 17(5) blocked credits
+│   ├── msme/                      # MSME classification
+│   │   └── classification.csv     # Micro/Small/Medium limits
+│   └── india/                     # India reference data
+│       └── state_codes.csv        # All 38 GST state codes
 │
 ├── 📚 knowledge/                  # Legal documents (PDFs)
 │   ├── gst/                       # CGST Act, Rules
@@ -193,16 +147,26 @@ ledgermind/
 ├── 📂 workspace/                  # YOUR company data goes here
 │   └── sample_company/            # Example files to try
 │
+├── 🧪 tests/                      # Test suite (121 tests)
+│   ├── conftest.py                # Shared test fixtures
+│   ├── test_config.py             # Configuration tests
+│   ├── test_reference_data.py     # Data loading tests
+│   ├── test_guardrails.py         # Validation tests
+│   ├── test_query_classifier.py   # Query routing tests
+│   ├── test_agents.py             # Agent tests
+│   ├── test_orchestration.py      # Workflow tests
+│   └── test_integration.py        # End-to-end tests
+│
 ├── 📖 docs/                       # Detailed documentation
 │   ├── ARCHITECTURE.md            # Technical deep-dive
-│   └── ROADMAP.md                 # Future plans
+│   └── ROADMAP.md                 # Development plan
 │
 ├── 🔧 scripts/                    # Helper tools
 │   ├── create_sample_data.py      # Generate test data
 │   └── ingest_knowledge.py        # Load PDFs into knowledge base
 │
 ├── main.py                        # 🚀 Start here!
-├── config.py                      # Settings
+├── config.py                      # Settings (paths, model config)
 └── requirements.txt               # Required packages
 ```
 
@@ -218,6 +182,8 @@ LedgerMind is designed to be **safe and reliable**:
 | **Math Safety** | AI never does calculations — only the computer does (no mistakes!) |
 | **Data Locality** | Your files never leave your computer |
 | **Source Citations** | Always shows which rule or document an answer comes from |
+| **Section 43B(h)** | Validates 45-day MSME payment compliance |
+| **ITC Time Limits** | Checks if Input Tax Credit is still claimable |
 
 ---
 
@@ -232,7 +198,9 @@ LedgerMind is designed to be **safe and reliable**:
 | **Tax Rate Lookup** | ✅ Ready | 89 goods + 50 services |
 | **Compliance Check** | ✅ Ready | Find tax issues |
 | **GSTIN Validation** | ✅ Ready | Verify tax IDs |
-| **Knowledge Base** | ✅ Ready | 1,276 GST rule chunks + Basic definitions |
+| **Knowledge Base** | ✅ Ready | 1,276 GST rule chunks |
+| **Query Classifier** | ✅ Ready | Routes questions to correct source |
+| **Test Suite** | ✅ Ready | 121 tests passing |
 
 ### Coming Soon 🚧
 
@@ -284,6 +252,17 @@ You> analyze folder workspace/sample_company/
 You> run compliance check
 You> When should I file GSTR-3B?
 You> What is the GST rate on laptops?
+You> What is CGST?
+```
+
+### Step 5: Run Tests
+
+```bash
+# Run all 121 tests
+pytest tests/ -v
+
+# Run specific test file
+pytest tests/test_guardrails.py -v
 ```
 
 ---
@@ -304,7 +283,7 @@ You> What is the GST rate on laptops?
 │ ✅ Tax rates    │   │ • 43B(h) alerts │   │ • Web dashboard │
 │ ✅ Knowledge    │   │ • ITC matching  │   │ • PDF exports   │
 │ ✅ Guardrails   │   │ • HSN verify    │   │ • REST API      │
-│ ✅ Agents       │   │ • Audit reports │   │                 │
+│ ✅ Tests (121)  │   │ • Audit reports │   │                 │
 └─────────────────┘   └─────────────────┘   └─────────────────┘
 ```
 
@@ -320,8 +299,9 @@ LedgerMind knows about:
 | **HSN Codes** | 89 common goods with rates |
 | **SAC Codes** | 50 common services with rates |
 | **Section 43B(h)** | MSME payment rules (45 days) |
-| **Section 17(5)** | Blocked ITC items |
+| **Section 17(5)** | 15 blocked ITC items |
 | **MSME Classification** | Micro/Small/Medium limits |
+| **State Codes** | All 38 GST state codes |
 
 ---
 
