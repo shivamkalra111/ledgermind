@@ -1,0 +1,64 @@
+{
+  "sales_register_2025.xlsx": {
+    "sheet_type": "sales_register",
+    "confidence": 1.0,
+    "header_mapping": {
+      "Invoice No": "invoice_number",
+      "Customer Name": "party_name",
+      "Invoice Date": "invoice_date",
+      "Customer GSTIN": "party_gstin",
+      "Place of Supply": "place_of_supply",
+      "Item Description": "description",
+      "HSN/SAC Code": "hsn_code",
+      "Taxable Value": "taxable_value",
+      "CGST Rate": "cgst_rate",
+      "CGST Amount": "cgst_amount",
+      "SGST Rate": "sgst_rate",
+      "SGST Amount": "sgst_amount",
+      "IGST Rate": "igst_rate",
+      "IGST Amount": "igst_amount",
+      "Total Invoice Value": "total_value"
+    },
+    "unmapped_headers": [
+      "place_of_supply"
+    ]
+  },
+  "purchase_ledger_2025.xlsx": {
+    "sheet_type": "sales_register",
+    "confidence": 1.0,
+    "header_mapping": {
+      "Bill No": "invoice_number",
+      "Bill Date": "invoice_date",
+      "Vendor Name": "party_name",
+      "Taxable Amount": "taxable_value",
+      "CGST Amt": "cgst_amount",
+      "SGST Amt": "sgst_amount",
+      "Total Amount": "total_value"
+    },
+    "unmapped_headers": [
+      "Vendor GSTIN",
+      "Is MSME",
+      "MSME Category",
+      "Item Description",
+      "HSN/SAC Code",
+      "CGST %",
+      "SGST %",
+      "Payment Status",
+      "Payment Date"
+    ]
+  },
+  "bank_statement_oct_nov_2025.csv": {
+    "sheet_type": "bank_statement",
+    "confidence": 0.8,
+    "header_mapping": {
+      "Date": "invoice_date",
+      "Description": "description",
+      "Credit": "credit_amount",
+      "Debit": "debit_amount",
+      "Balance": "balance"
+    },
+    "unmapped_headers": [
+      "Reference"
+    ]
+  }
+}

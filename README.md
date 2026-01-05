@@ -4,7 +4,7 @@
 
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Status: Development](https://img.shields.io/badge/status-development-orange.svg)]()
+[![Status: Phase 1](https://img.shields.io/badge/status-Phase%201-orange.svg)]()
 
 ---
 
@@ -21,117 +21,65 @@ LedgerMind is an **autonomous AI platform** that analyzes your company's Excel/C
 
 ---
 
+## Current Status
+
+### What's Built
+
+| Component | Status | File |
+|-----------|--------|------|
+| **Data Engine** | ✅ Built | `core/data_engine.py` |
+| **Guardrails** | ✅ Built | `core/guardrails.py` |
+| **Metrics** | ✅ Built | `core/metrics.py` |
+| **Schema (SDM)** | ✅ Built | `core/schema.py` |
+| **Header Mapper** | ✅ Built | `core/mapper.py` |
+| **Knowledge Base** | ✅ Built | `core/knowledge.py` |
+| **LLM Client** | ✅ Built | `llm/client.py` |
+| **Discovery Agent** | ✅ Built | `agents/discovery.py` |
+| **Compliance Agent** | ✅ Built | `agents/compliance.py` |
+| **Strategist Agent** | ✅ Built | `agents/strategist.py` |
+| **Workflow Orchestrator** | ✅ Built | `orchestration/workflow.py` |
+| **Intent Router** | ✅ Built | `orchestration/router.py` |
+| **GST Rate Database** | ✅ Built | `db/gst_rates/*.csv` |
+| **Sample Data** | ✅ Built | `workspace/sample_company/` |
+
+### What's Needed to Run
+
+| Requirement | Purpose |
+|-------------|---------|
+| **Python 3.10+** | Runtime |
+| **Ollama** | Local LLM server |
+| **qwen2.5:7b-instruct** | LLM model |
+
+---
+
 ## Quick Start
 
-### Prerequisites
+### 1. Install Dependencies
 
 ```bash
-# Install Ollama
-curl -fsSL https://ollama.com/install.sh | sh
-
-# Pull the model
-ollama pull qwen2.5:7b-instruct
-
-# Start Ollama (keep running)
-ollama serve
-```
-
-### Installation
-
-```bash
-git clone <repo-url>
 cd ledgermind
-
 python -m venv venv
 source venv/bin/activate  # Windows: venv\Scripts\activate
-
 pip install -r requirements.txt
 ```
 
-### Run
+### 2. Start Ollama (Optional for full features)
 
 ```bash
-# Interactive mode
-python main.py
+# Install Ollama (if not installed)
+curl -fsSL https://ollama.com/install.sh | sh
 
-# Analyze a folder
-python main.py "analyze folder /path/to/your/excels/"
+# Pull model
+ollama pull qwen2.5:7b-instruct
 
-# Ask a question
-python main.py "What is the ITC time limit?"
+# Start server
+ollama serve
 ```
 
----
-
-## How It Works
-
-```
-┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
-│  Your Excel/CSV │────▶│   AI Agents     │────▶│  Insights       │
-│  Files          │     │                 │     │                 │
-│                 │     │  • Discovery    │     │  • Tax Savings  │
-│  • Sales        │     │  • Compliance   │     │  • Compliance   │
-│  • Purchases    │     │  • Strategist   │     │  • Forecasts    │
-│  • Bank         │     │                 │     │                 │
-└─────────────────┘     └─────────────────┘     └─────────────────┘
-        │                       │                       │
-        ▼                       ▼                       ▼
-     DuckDB               ChromaDB + LLM          Actionable
-   (Your Data)            (GST Rules)             Reports
-```
-
-### Three AI Agents
-
-| Agent | Purpose |
-|-------|---------|
-| **Discovery** | Scans your Excel/CSV files, maps headers, loads into queryable database |
-| **Compliance** | Checks tax rates, ITC eligibility, Section 43B(h), blocked credits |
-| **Strategist** | Ranks vendors, forecasts cash flow, analyzes profit margins |
-
----
-
-## Example Usage
-
-### 1. Analyze Your Data
+### 3. Run
 
 ```bash
 python main.py
-> analyze folder ~/Documents/MyCompany/
-
-📁 Folder Analysis Complete
-Files Found: 3
-Tables Created: sales_2025, purchases, bank_statement
-
-✅ Data loaded! You can now run compliance checks.
-```
-
-### 2. Run Compliance Check
-
-```bash
-> run compliance check
-
-📋 Compliance Audit Summary
-
-Issues Found: 5
-🔴 Critical: 2
-🟡 Warnings: 3
-
-Financial Impact:
-• Potential Tax Savings: ₹12,400
-• Amount at Risk: ₹45,000
-
-⚠️ Payment to ABC Traders overdue by 12 days — Section 43B(h) risk
-```
-
-### 3. Ask Questions
-
-```bash
-> What's my total sales this quarter?
-Query: SELECT SUM(total_value) FROM sales WHERE ...
-Results: ₹24,50,000
-
-> What is Section 17(5)?
-Section 17(5) of CGST Act lists items where ITC cannot be claimed...
 ```
 
 ---
@@ -140,16 +88,64 @@ Section 17(5) of CGST Act lists items where ITC cannot be claimed...
 
 ```
 ledgermind/
-├── agents/           # AI Agents (Discovery, Compliance, Strategist)
-├── core/             # Data Engine (DuckDB), Knowledge Base (ChromaDB)
-├── orchestration/    # Workflow coordination, Intent routing
-├── llm/              # Ollama/Qwen integration
-├── db/               # Reference data (GST rates, MSME limits)
-├── knowledge/        # PDFs for RAG (GST Act, Accounting)
-├── workspace/        # Your company data (Excel/CSV)
-├── docs/             # Technical documentation
-├── main.py           # Entry point
-└── config.py         # Configuration
+├── agents/                    # AI Agents
+│   ├── discovery.py           # Scans Excel/CSV, maps headers
+│   ├── compliance.py          # Tax checks, 43B(h), blocked credits
+│   └── strategist.py          # Vendor ranking, cash flow
+├── core/                      # Core Infrastructure
+│   ├── data_engine.py         # DuckDB integration
+│   ├── guardrails.py          # Input validation, safety
+│   ├── metrics.py             # Performance tracking
+│   ├── schema.py              # Standard Data Model
+│   ├── mapper.py              # Header mapping
+│   └── knowledge.py           # ChromaDB/RAG
+├── orchestration/             # Agent Coordination
+│   ├── router.py              # Intent classification
+│   └── workflow.py            # Agent workflow
+├── llm/                       # LLM Integration
+│   └── client.py              # Ollama client
+├── db/                        # Reference Data (CSV/JSON)
+│   ├── gst_rates/             # HSN/SAC rates
+│   ├── gst_rates_2025.json    # Master GST data
+│   ├── msme_classification.csv
+│   └── state_codes.csv
+├── knowledge/                 # PDFs for RAG
+│   ├── gst/                   # GST Act, Rules
+│   └── accounting/            # Accounting books
+├── workspace/                 # User Data
+│   └── sample_company/        # Sample Excel/CSV files
+├── docs/                      # Documentation
+│   ├── ARCHITECTURE.md        # Technical design
+│   └── ROADMAP.md             # Development plan
+├── scripts/                   # Utilities
+│   ├── create_sample_data.py  # Generate test data
+│   └── ingest_knowledge.py    # Populate ChromaDB
+├── main.py                    # Entry point
+├── config.py                  # Configuration
+└── requirements.txt           # Dependencies
+```
+
+---
+
+## Verification Tests
+
+Quick checks to verify the build:
+
+```bash
+# 1. Check dependencies install
+pip install -r requirements.txt
+
+# 2. Check config loads GST rates
+python -c "from config import load_goods_rates; print(f'Goods rates: {len(load_goods_rates())} items')"
+
+# 3. Check guardrails work
+python -c "from core.guardrails import Guardrails; g = Guardrails(); print('GSTIN valid:', g.validate_gstin('27AAPFU0939F1ZV'))"
+
+# 4. Check sample data exists
+ls workspace/sample_company/
+
+# 5. Run main (requires Ollama for full features)
+python main.py
 ```
 
 ---
@@ -158,135 +154,67 @@ ledgermind/
 
 | Component | Technology |
 |-----------|------------|
-| **LLM** | Qwen2.5-7B via Ollama (local) |
-| **Data Engine** | DuckDB (Excel as SQL) |
-| **Knowledge Base** | ChromaDB (RAG for rules) |
+| **LLM** | Qwen2.5-7B via Ollama |
+| **Data Engine** | DuckDB |
+| **Knowledge Base** | ChromaDB |
 | **Embeddings** | bge-large-en-v1.5 |
+| **Agent Framework** | LangGraph |
 
 ---
 
-## GST 2025 Ready
+## GST 2025 Reference Data
 
-Based on **September 2025 GST reforms** (56th GST Council Meeting):
+Based on **56th GST Council Meeting (Sept 2025)**:
 
-| Slab | Rate | Examples |
-|------|------|----------|
-| Exempt | 0% | Fresh food, health insurance, education |
+| Slab | Rate | Items |
+|------|------|-------|
+| Exempt | 0% | Fresh food, health insurance |
 | Merit | 5% | FMCG, packaged food, medicines |
-| Standard | 18% | Electronics, services, construction |
-| Luxury | 28%+ | Tobacco, aerated drinks, luxury cars |
+| Standard | 18% | Electronics, services |
+| Luxury | 28%+ | Tobacco, luxury cars |
+
+**Database:** 89 goods + 50 services in `db/gst_rates/`
+
+---
+
+## Development Roadmap
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  Phase 1 (NOW)    Phase 2         Phase 3         Phase 4   │
+│  FOUNDATION       COMPLIANCE      INTELLIGENCE    PRODUCTION│
+│                                                             │
+│  ■■■■■□□□        □□□□□□□□       □□□□□□□□       □□□□□□□□   │
+│  ~70%             0%              0%              0%        │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Phase 1 Progress
+
+- [x] Project structure
+- [x] DuckDB integration
+- [x] ChromaDB setup
+- [x] 3 Agent framework
+- [x] GST rate database
+- [x] Guardrails & Metrics
+- [x] Sample data
+- [ ] **Integration testing** ← Next
+- [ ] Knowledge base population (PDFs)
+
+### Upcoming Phases
+
+| Phase | Key Deliverables |
+|-------|------------------|
+| **Phase 2** | Tax rate verification, ITC reconciliation, 43B(h) monitoring |
+| **Phase 3** | Vendor scoring, MSME verification, cash flow ML |
+| **Phase 4** | Web UI, PDF reports, REST API |
 
 ---
 
 ## Documentation
 
-| Document | Description |
-|----------|-------------|
-| [ARCHITECTURE.md](docs/ARCHITECTURE.md) | Technical architecture, data flows, component details |
-| [ROADMAP.md](docs/ROADMAP.md) | Development phases, milestones, success criteria |
-
----
-
-## Development Plan
-
-### Phase Overview
-
-```
-Phase 1           Phase 2           Phase 3           Phase 4
-FOUNDATION        COMPLIANCE        INTELLIGENCE      PRODUCTION
-[2 weeks]         [3 weeks]         [3 weeks]         [2 weeks]
-
-┌─────────┐       ┌─────────┐       ┌─────────┐       ┌─────────┐
-│ DuckDB  │       │ Tax     │       │ Vendor  │       │ Web UI  │
-│ ChromaDB│──────▶│ Checks  │──────▶│ Scoring │──────▶│ Reports │
-│ Agents  │       │ ITC/43B │       │ Forecast│       │ API     │
-└─────────┘       └─────────┘       └─────────┘       └─────────┘
-
-◀─── WE ARE HERE
-```
-
----
-
-## Current Status: Phase 1 (Foundation)
-
-### ✅ Completed
-
-| Component | Status | Details |
-|-----------|--------|---------|
-| **Project Architecture** | ✅ Done | Multi-agent structure, orchestration layer |
-| **DuckDB Integration** | ✅ Done | Excel/CSV → SQL tables |
-| **ChromaDB Setup** | ✅ Done | Vector DB for RAG |
-| **LLM Client** | ✅ Done | Ollama/Qwen integration |
-| **Discovery Agent** | ✅ Done | Header mapping, sheet detection |
-| **Compliance Agent** | ✅ Done | Tax checks, 43B(h), blocked credits |
-| **Strategist Agent** | ✅ Done | Vendor ranking, cash flow |
-| **GST Rate Database** | ✅ Done | 89 goods + 50 services (Sept 2025) |
-| **Intent Router** | ✅ Done | Query classification |
-| **CLI Interface** | ✅ Done | Interactive mode |
-
-### 🔄 In Progress
-
-| Task | Status | Notes |
-|------|--------|-------|
-| End-to-end testing | 🔄 | Test with real Excel files |
-| PDF ingestion | 🔄 | Ingest GST PDFs to ChromaDB |
-| Bug fixes | 🔄 | Runtime error handling |
-
-### 📋 Upcoming (Phase 2-4)
-
-| Phase | Key Features |
-|-------|--------------|
-| **Phase 2: Compliance** | Full tax rate verification, HSN/SAC lookup, ITC reconciliation, compliance reports |
-| **Phase 3: Intelligence** | Vendor MSME verification, cash flow ML model, profit analysis, recommendations |
-| **Phase 4: Production** | Web UI, PDF reports, API endpoints, multi-company support |
-
----
-
-## Roadmap Summary
-
-### Phase 1: Foundation ← **Current**
-- [x] Project structure & architecture
-- [x] DuckDB (Excel as SQL)
-- [x] ChromaDB (GST rules RAG)
-- [x] 3 Agent framework
-- [x] GST 2025 rate database
-- [ ] Integration testing
-- [ ] Knowledge base population
-
-### Phase 2: Compliance Engine
-- [ ] Tax rate verification (HSN/SAC)
-- [ ] ITC eligibility checker
-- [ ] Section 17(5) detection
-- [ ] Section 43B(h) monitoring
-- [ ] Compliance report generation
-
-### Phase 3: Strategic Intelligence
-- [ ] Vendor reliability scoring
-- [ ] MSME vendor identification
-- [ ] Cash flow forecasting
-- [ ] Profit margin analysis
-- [ ] Actionable recommendations
-
-### Phase 4: Production
-- [ ] Web UI (FastAPI + Frontend)
-- [ ] PDF/Excel report export
-- [ ] REST API
-- [ ] Multi-company support
-- [ ] Deployment package
-
-See [ROADMAP.md](docs/ROADMAP.md) for detailed technical milestones.
-
----
-
-## Contributing
-
-This is an active development project. Contributions welcome!
-
----
-
-## License
-
-MIT License — See LICENSE file.
+- [ARCHITECTURE.md](docs/ARCHITECTURE.md) — Technical design, data flows
+- [ROADMAP.md](docs/ROADMAP.md) — Detailed milestones
 
 ---
 
