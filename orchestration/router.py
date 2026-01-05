@@ -45,9 +45,10 @@ class IntentRouter:
                 r"process\s+(?:folder|directory)\s*[:\s]*(.+)",
             ],
             IntentType.DATA_QUERY: [
-                r"(?:what(?:'s| is)|show|get|find|list)\s+(?:my|our|the)\s+(.+)",
-                r"(?:total|sum|count|average)\s+(.+)",
+                r"(?:what(?:'s| is)|show|get|find|list)\s+(?:my|our)\s+(.+)",
+                r"(?:total|sum|count|average)\s+(?:of\s+)?(?:my|our)?\s*(.+)",
                 r"(?:how much|how many)\s+(.+)",
+                r"(?:show|list|get)\s+(?:all\s+)?(?:sales|purchases|invoices|transactions|vendors)",
             ],
             IntentType.COMPLIANCE_CHECK: [
                 r"(?:run|check|audit|verify)\s+compliance",
@@ -66,6 +67,9 @@ class IntentRouter:
                 r"(?:section|rule|act)\s+\d+",
                 r"(?:gst|cgst|sgst|igst|itc)\s+(?:rule|section|law)",
                 r"(?:can i|is it allowed|eligible)",
+                r"(?:when|what|how)\s+(?:should|do|to)\s+(?:i|we)?\s*(?:file|fill|submit)\s+(?:gst|gstr|return)",
+                r"(?:due date|deadline|last date)\s+(?:for|of|to)\s+(?:filing|gstr|gst|return)",
+                r"gstr-?\d+[a-z]?\s+(?:due|deadline|filing|date)",
             ],
             IntentType.HELP: [
                 r"^help$",

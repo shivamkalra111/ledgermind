@@ -1,6 +1,6 @@
 # LedgerMind
 
-**Agentic AI CFO for MSMEs** — Transform messy financial data into actionable insights.
+**Your AI-Powered CFO for Small Businesses** — Making tax compliance simple and automatic.
 
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -8,214 +8,353 @@
 
 ---
 
-## What is LedgerMind?
+## 🎯 The Problem We Solve
 
-LedgerMind is an **autonomous AI platform** that analyzes your company's Excel/CSV financial data and provides:
+**Indian MSMEs face a nightmare:**
+- Messy Excel files everywhere (sales, purchases, bank statements)
+- Confusing GST rules that change every year
+- Fear of tax penalties and compliance issues
+- No idea if vendors are reliable or cash flow is healthy
+- Can't afford a full-time CFO or CA
 
-- 🔍 **Tax Savings** — Find overpaid GST, wrong tax rates
-- ⚠️ **Compliance Alerts** — Section 43B(h), blocked credits, ITC issues
-- 📊 **Strategic Insights** — Vendor rankings, cash flow forecasts
-- 💬 **Natural Language Queries** — Ask questions about your data or GST rules
+**LedgerMind is your AI assistant that:**
+- Reads your Excel files and understands them automatically
+- Knows all GST rules (updated for 2025-26)
+- Finds tax savings you're missing
+- Warns you before compliance deadlines
+- Answers your finance questions in plain language
 
-**100% Local** — All processing happens on your machine. Your data never leaves.
-
----
-
-## Current Status
-
-### What's Built
-
-| Component | Status | File |
-|-----------|--------|------|
-| **Data Engine** | ✅ Built | `core/data_engine.py` |
-| **Guardrails** | ✅ Built | `core/guardrails.py` |
-| **Metrics** | ✅ Built | `core/metrics.py` |
-| **Schema (SDM)** | ✅ Built | `core/schema.py` |
-| **Header Mapper** | ✅ Built | `core/mapper.py` |
-| **Knowledge Base** | ✅ Built | `core/knowledge.py` |
-| **LLM Client** | ✅ Built | `llm/client.py` |
-| **Discovery Agent** | ✅ Built | `agents/discovery.py` |
-| **Compliance Agent** | ✅ Built | `agents/compliance.py` |
-| **Strategist Agent** | ✅ Built | `agents/strategist.py` |
-| **Workflow Orchestrator** | ✅ Built | `orchestration/workflow.py` |
-| **Intent Router** | ✅ Built | `orchestration/router.py` |
-| **GST Rate Database** | ✅ Built | `db/gst_rates/*.csv` |
-| **Sample Data** | ✅ Built | `workspace/sample_company/` |
-
-### What's Needed to Run
-
-| Requirement | Purpose |
-|-------------|---------|
-| **Python 3.10+** | Runtime |
-| **Ollama** | Local LLM server |
-| **qwen2.5:7b-instruct** | LLM model |
+**100% Private** — Everything runs on your computer. Your data never goes to the cloud.
 
 ---
 
-## Quick Start
+## 🧠 How It Works (Simple Explanation)
 
-### 1. Install Dependencies
+Think of LedgerMind as having **3 AI employees** working for you:
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                                                                         │
+│   📂 YOUR EXCEL FILES                                                   │
+│   (Sales, Purchases, Bank Statements)                                   │
+│                         │                                               │
+│                         ▼                                               │
+│   ┌─────────────────────────────────────────────────────────────────┐   │
+│   │                    🤖 AI BRAIN (LedgerMind)                     │   │
+│   │                                                                 │   │
+│   │   ┌───────────┐   ┌───────────┐   ┌───────────┐               │   │
+│   │   │ DISCOVERY │   │ AUDITOR   │   │ ADVISOR   │               │   │
+│   │   │   Agent   │   │   Agent   │   │   Agent   │               │   │
+│   │   │           │   │           │   │           │               │   │
+│   │   │ "I read   │   │ "I check  │   │ "I find   │               │   │
+│   │   │  your     │   │  for tax  │   │  savings  │               │   │
+│   │   │  files"   │   │  mistakes"│   │  & risks" │               │   │
+│   │   └───────────┘   └───────────┘   └───────────┘               │   │
+│   │         │               │               │                       │   │
+│   │         └───────────────┼───────────────┘                       │   │
+│   │                         ▼                                       │   │
+│   │              ┌─────────────────────┐                           │   │
+│   │              │   📚 KNOWLEDGE      │                           │   │
+│   │              │   GST Rules 2025    │                           │   │
+│   │              │   Tax Rates         │                           │   │
+│   │              │   Compliance Laws   │                           │   │
+│   │              └─────────────────────┘                           │   │
+│   └─────────────────────────────────────────────────────────────────┘   │
+│                         │                                               │
+│                         ▼                                               │
+│   📊 INSIGHTS FOR YOU                                                   │
+│   • "You overpaid ₹12,400 in GST last month"                           │
+│   • "Warning: Payment to ABC Traders is overdue"                        │
+│   • "Your best vendor is XYZ Supplies (98% reliable)"                  │
+│                                                                         │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+### The 3 AI Agents Explained
+
+| Agent | What It Does | Real-World Analogy |
+|-------|--------------|-------------------|
+| 🔍 **Discovery Agent** | Reads your messy Excel files and organizes them | Like a junior accountant who sorts through your paperwork |
+| ✅ **Compliance Agent** | Checks if you're following GST rules correctly | Like a tax auditor checking your books |
+| 📈 **Strategist Agent** | Finds savings and warns about problems | Like a CFO giving you business advice |
+
+---
+
+## 💡 What Can You Ask LedgerMind?
+
+### About Your Data
+- *"What were my total sales last month?"*
+- *"Show me all purchases above ₹50,000"*
+- *"Which vendor do I owe the most?"*
+
+### About GST Rules
+- *"When should I file GSTR-3B?"*
+- *"What is Section 43B(h)?"*
+- *"Can I claim ITC on office furniture?"*
+
+### Compliance Checks
+- *"Run a compliance check"*
+- *"Are there any tax issues?"*
+- *"Check my vendor payments"*
+
+---
+
+## 🏗️ System Architecture (For the Curious)
+
+```
+┌──────────────────────────────────────────────────────────────────────┐
+│                         USER INTERFACE                               │
+│                    (Command Line / Terminal)                         │
+└──────────────────────────────────┬───────────────────────────────────┘
+                                   │
+                                   ▼
+┌──────────────────────────────────────────────────────────────────────┐
+│                      ORCHESTRATION LAYER                             │
+│  ┌────────────────┐    ┌─────────────────────────────────────────┐  │
+│  │ Intent Router  │───▶│ Workflow Engine                         │  │
+│  │                │    │ (Coordinates which agent does what)     │  │
+│  │ "What does the │    └─────────────────────────────────────────┘  │
+│  │  user want?"   │                                                  │
+│  └────────────────┘                                                  │
+└──────────────────────────────────┬───────────────────────────────────┘
+                                   │
+            ┌──────────────────────┼──────────────────────┐
+            ▼                      ▼                      ▼
+┌───────────────────┐  ┌───────────────────┐  ┌───────────────────┐
+│  DISCOVERY AGENT  │  │  COMPLIANCE AGENT │  │  STRATEGIST AGENT │
+│                   │  │                   │  │                   │
+│  • Read Excel/CSV │  │  • Tax rate check │  │  • Vendor ranking │
+│  • Map headers    │  │  • ITC validation │  │  • Cash forecast  │
+│  • Create tables  │  │  • 43B(h) alerts  │  │  • Profit analysis│
+└─────────┬─────────┘  └─────────┬─────────┘  └─────────┬─────────┘
+          │                      │                      │
+          └──────────────────────┼──────────────────────┘
+                                 │
+┌────────────────────────────────┴─────────────────────────────────────┐
+│                           CORE LAYER                                 │
+│                                                                      │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐ │
+│  │ Data Engine │  │ Knowledge   │  │ Guardrails  │  │   Metrics   │ │
+│  │  (DuckDB)   │  │    Base     │  │  (Safety)   │  │  (Tracking) │ │
+│  │             │  │ (ChromaDB)  │  │             │  │             │ │
+│  │ Your Excel  │  │ GST PDFs &  │  │ Validates   │  │ Tracks      │ │
+│  │ as Database │  │ Tax Rules   │  │ all inputs  │  │ performance │ │
+│  └─────────────┘  └─────────────┘  └─────────────┘  └─────────────┘ │
+│                                                                      │
+└──────────────────────────────────────────────────────────────────────┘
+                                 │
+                                 ▼
+┌──────────────────────────────────────────────────────────────────────┐
+│                         AI BRAIN (LOCAL)                             │
+│                                                                      │
+│         🧠 Qwen 2.5 (7B) running via Ollama on YOUR computer         │
+│                     (No internet required)                           │
+└──────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 📁 Project Structure (What's Inside)
+
+```
+ledgermind/
+│
+├── 🤖 agents/                     # The 3 AI workers
+│   ├── discovery.py               # Reads and organizes your files
+│   ├── compliance.py              # Checks tax rules
+│   └── strategist.py              # Gives business advice
+│
+├── ⚙️ core/                       # The engine room
+│   ├── data_engine.py             # Turns Excel into searchable database
+│   ├── knowledge.py               # Stores GST rules for quick lookup
+│   ├── guardrails.py              # Safety checks (validates GSTINs, etc.)
+│   ├── metrics.py                 # Tracks system performance
+│   ├── schema.py                  # Standard format for all data
+│   └── mapper.py                  # Maps messy headers to standard names
+│
+├── 🎯 orchestration/              # The traffic controller
+│   ├── router.py                  # Understands what you're asking
+│   └── workflow.py                # Coordinates the agents
+│
+├── 🧠 llm/                        # AI brain connection
+│   └── client.py                  # Talks to the Ollama AI model
+│
+├── 📊 db/                         # Reference data (pre-loaded)
+│   ├── gst_rates/                 # Tax rates for 89 goods + 50 services
+│   │   ├── goods_rates_2025.csv   # GST on products (HSN codes)
+│   │   └── services_rates_2025.csv# GST on services (SAC codes)
+│   ├── msme_classification.csv    # Micro/Small/Medium limits
+│   └── state_codes.csv            # All Indian state GST codes
+│
+├── 📚 knowledge/                  # Legal documents (PDFs)
+│   ├── gst/                       # CGST Act, Rules
+│   └── accounting/                # Accounting standards
+│
+├── 📂 workspace/                  # YOUR company data goes here
+│   └── sample_company/            # Example files to try
+│
+├── 📖 docs/                       # Detailed documentation
+│   ├── ARCHITECTURE.md            # Technical deep-dive
+│   └── ROADMAP.md                 # Future plans
+│
+├── 🔧 scripts/                    # Helper tools
+│   ├── create_sample_data.py      # Generate test data
+│   └── ingest_knowledge.py        # Load PDFs into knowledge base
+│
+├── main.py                        # 🚀 Start here!
+├── config.py                      # Settings
+└── requirements.txt               # Required packages
+```
+
+---
+
+## 🛡️ Safety Features (Guardrails)
+
+LedgerMind is designed to be **safe and reliable**:
+
+| Feature | What It Does |
+|---------|--------------|
+| **GSTIN Validation** | Checks if tax IDs are real and correctly formatted |
+| **Math Safety** | AI never does calculations — only the computer does (no mistakes!) |
+| **Data Locality** | Your files never leave your computer |
+| **Source Citations** | Always shows which rule or document an answer comes from |
+
+---
+
+## 📈 Current Status
+
+### What's Working Now ✅
+
+| Feature | Status | What You Can Do |
+|---------|--------|-----------------|
+| **Read Excel/CSV** | ✅ Ready | Drop your files, we understand them |
+| **GST Q&A** | ✅ Ready | Ask any GST question |
+| **Tax Rate Lookup** | ✅ Ready | 89 goods + 50 services |
+| **Compliance Check** | ✅ Ready | Find tax issues |
+| **GSTIN Validation** | ✅ Ready | Verify tax IDs |
+
+### Coming Soon 🚧
+
+| Feature | Phase | Description |
+|---------|-------|-------------|
+| **ITC Reconciliation** | Phase 2 | Match your purchases with GSTR-2B |
+| **43B(h) Alerts** | Phase 2 | Warn before MSME payment deadlines |
+| **Vendor Scoring** | Phase 3 | Rate vendors by reliability |
+| **Cash Flow Forecast** | Phase 3 | Predict next 3 months |
+| **Web Interface** | Phase 4 | Beautiful dashboard |
+| **PDF Reports** | Phase 4 | Export audit reports |
+
+---
+
+## 🚀 Quick Start
+
+### Step 1: Install (One Time)
 
 ```bash
 cd ledgermind
 python -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
+source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### 2. Start Ollama (Optional for full features)
+### Step 2: Start AI Brain
 
 ```bash
 # Install Ollama (if not installed)
 curl -fsSL https://ollama.com/install.sh | sh
 
-# Pull model
+# Download the AI model (4GB, one time)
 ollama pull qwen2.5:7b-instruct
 
-# Start server
+# Start Ollama server
 ollama serve
 ```
 
-### 3. Run
+### Step 3: Run LedgerMind
 
 ```bash
 python main.py
 ```
 
----
-
-## Project Structure
+### Step 4: Try It!
 
 ```
-ledgermind/
-├── agents/                    # AI Agents
-│   ├── discovery.py           # Scans Excel/CSV, maps headers
-│   ├── compliance.py          # Tax checks, 43B(h), blocked credits
-│   └── strategist.py          # Vendor ranking, cash flow
-├── core/                      # Core Infrastructure
-│   ├── data_engine.py         # DuckDB integration
-│   ├── guardrails.py          # Input validation, safety
-│   ├── metrics.py             # Performance tracking
-│   ├── schema.py              # Standard Data Model
-│   ├── mapper.py              # Header mapping
-│   └── knowledge.py           # ChromaDB/RAG
-├── orchestration/             # Agent Coordination
-│   ├── router.py              # Intent classification
-│   └── workflow.py            # Agent workflow
-├── llm/                       # LLM Integration
-│   └── client.py              # Ollama client
-├── db/                        # Reference Data (CSV/JSON)
-│   ├── gst_rates/             # HSN/SAC rates
-│   ├── gst_rates_2025.json    # Master GST data
-│   ├── msme_classification.csv
-│   └── state_codes.csv
-├── knowledge/                 # PDFs for RAG
-│   ├── gst/                   # GST Act, Rules
-│   └── accounting/            # Accounting books
-├── workspace/                 # User Data
-│   └── sample_company/        # Sample Excel/CSV files
-├── docs/                      # Documentation
-│   ├── ARCHITECTURE.md        # Technical design
-│   └── ROADMAP.md             # Development plan
-├── scripts/                   # Utilities
-│   ├── create_sample_data.py  # Generate test data
-│   └── ingest_knowledge.py    # Populate ChromaDB
-├── main.py                    # Entry point
-├── config.py                  # Configuration
-└── requirements.txt           # Dependencies
+You> analyze folder workspace/sample_company/
+You> run compliance check
+You> When should I file GSTR-3B?
+You> What is the GST rate on laptops?
 ```
 
 ---
 
-## Verification Tests
+## 📅 Development Roadmap
 
-Quick checks to verify the build:
-
-```bash
-# 1. Check dependencies install
-pip install -r requirements.txt
-
-# 2. Check config loads GST rates
-python -c "from config import load_goods_rates; print(f'Goods rates: {len(load_goods_rates())} items')"
-
-# 3. Check guardrails work
-python -c "from core.guardrails import Guardrails; g = Guardrails(); print('GSTIN valid:', g.validate_gstin('27AAPFU0939F1ZV'))"
-
-# 4. Check sample data exists
-ls workspace/sample_company/
-
-# 5. Run main (requires Ollama for full features)
-python main.py
+```
+        NOW                    NEXT                   FUTURE
+         │                      │                       │
+         ▼                      ▼                       ▼
+┌─────────────────┐   ┌─────────────────┐   ┌─────────────────┐
+│   PHASE 1       │   │   PHASE 2       │   │   PHASE 3 & 4   │
+│   FOUNDATION    │   │   COMPLIANCE    │   │   INTELLIGENCE  │
+│                 │   │                 │   │                 │
+│ ✅ Read files   │   │ • ITC matching  │   │ • Vendor scores │
+│ ✅ GST Q&A      │   │ • 43B(h) alerts │   │ • Cash forecast │
+│ ✅ Tax rates    │   │ • HSN verify    │   │ • Web dashboard │
+│ ✅ Compliance   │   │ • Audit reports │   │ • PDF exports   │
+│    checks       │   │                 │   │                 │
+│                 │   │                 │   │                 │
+│   ~80% done     │   │   Coming next   │   │   Future        │
+└─────────────────┘   └─────────────────┘   └─────────────────┘
 ```
 
 ---
 
-## Tech Stack
+## 📚 GST 2025-26 Knowledge
 
-| Component | Technology |
-|-----------|------------|
-| **LLM** | Qwen2.5-7B via Ollama |
-| **Data Engine** | DuckDB |
-| **Knowledge Base** | ChromaDB |
-| **Embeddings** | bge-large-en-v1.5 |
-| **Agent Framework** | LangGraph |
+LedgerMind knows about:
 
----
-
-## GST 2025 Reference Data
-
-Based on **56th GST Council Meeting (Sept 2025)**:
-
-| Slab | Rate | Items |
-|------|------|-------|
-| Exempt | 0% | Fresh food, health insurance |
-| Merit | 5% | FMCG, packaged food, medicines |
-| Standard | 18% | Electronics, services |
-| Luxury | 28%+ | Tobacco, luxury cars |
-
-**Database:** 89 goods + 50 services in `db/gst_rates/`
+| Category | Coverage |
+|----------|----------|
+| **GST Slabs** | 0%, 5%, 12%, 18%, 28% + Cess |
+| **HSN Codes** | 89 common goods with rates |
+| **SAC Codes** | 50 common services with rates |
+| **Section 43B(h)** | MSME payment rules (45 days) |
+| **Section 17(5)** | Blocked ITC items |
+| **MSME Classification** | Micro/Small/Medium limits |
 
 ---
 
-## Development Roadmap
+## ❓ FAQ
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│  Phase 1 (NOW)    Phase 2         Phase 3         Phase 4   │
-│  FOUNDATION       COMPLIANCE      INTELLIGENCE    PRODUCTION│
-│                                                             │
-│  ■■■■■□□□        □□□□□□□□       □□□□□□□□       □□□□□□□□   │
-│  ~70%             0%              0%              0%        │
-└─────────────────────────────────────────────────────────────┘
-```
+**Q: Is my data safe?**
+> Yes! Everything runs on your computer. No data goes to any server.
 
-### Phase 1 Progress
+**Q: Do I need internet?**
+> Only to download the AI model once. After that, works offline.
 
-- [x] Project structure
-- [x] DuckDB integration
-- [x] ChromaDB setup
-- [x] 3 Agent framework
-- [x] GST rate database
-- [x] Guardrails & Metrics
-- [x] Sample data
-- [ ] **Integration testing** ← Next
-- [ ] Knowledge base population (PDFs)
+**Q: How accurate is it?**
+> Tax rules come from official CGST Act/Rules. AI provides explanations but always verify with your CA for critical decisions.
 
-### Upcoming Phases
+**Q: What Excel formats work?**
+> .xlsx, .xls, and .csv files. Any format your accountant uses.
 
-| Phase | Key Deliverables |
-|-------|------------------|
-| **Phase 2** | Tax rate verification, ITC reconciliation, 43B(h) monitoring |
-| **Phase 3** | Vendor scoring, MSME verification, cash flow ML |
-| **Phase 4** | Web UI, PDF reports, REST API |
+**Q: Can I use it for multiple companies?**
+> Yes! Create separate folders in `workspace/` for each company.
 
 ---
 
-## Documentation
+## 🤝 Contributing
 
-- [ARCHITECTURE.md](docs/ARCHITECTURE.md) — Technical design, data flows
-- [ROADMAP.md](docs/ROADMAP.md) — Detailed milestones
+This project is under active development. Ideas and contributions welcome!
+
+---
+
+## 📄 License
+
+MIT License — Free to use for personal and commercial purposes.
 
 ---
 
 **Built with ❤️ for Indian MSMEs**
+
+*Making tax compliance less painful, one Excel file at a time.*

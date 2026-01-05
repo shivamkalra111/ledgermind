@@ -64,7 +64,14 @@ class LLMClient:
         """Check if Ollama is running and model is available."""
         try:
             models = self.client.list()
-            model_names = [m["name"] for m in models.get("models", [])]
+            # Handle both dict and object responses from ollama library
+            model_list = models.get("models", []) if isinstance(models, dict) else getattr(models, 'models', [])
+            model_names = []
+            for m in model_list:
+                # Handle both dict and Model object
+                name = m.get("model") if isinstance(m, dict) else getattr(m, 'model', None)
+                if name:
+                    model_names.append(name)
             return any(self.model in name for name in model_names)
         except Exception:
             return False

@@ -104,12 +104,9 @@ class KnowledgeBase:
     ) -> List[Dict]:
         """Search the knowledge base for relevant documents."""
         
-        # Generate query embedding
-        query_embedding = self.embedder.encode(query).tolist()
-        
-        # Search
+        # Use text-based search (ChromaDB handles embedding)
         results = self.collection.query(
-            query_embeddings=[query_embedding],
+            query_texts=[query],
             n_results=n_results,
             where=filter_metadata
         )
@@ -126,10 +123,35 @@ class KnowledgeBase:
         
         return formatted
     
+    def _enhance_gst_query(self, query: str) -> str:
+        """Enhance query with GST-specific terms for better matching."""
+        query_lower = query.lower()
+        
+        # Map common questions to technical terms
+        enhancements = []
+        
+        if any(term in query_lower for term in ['file', 'fill', 'submit', 'return']):
+            enhancements.extend(['GSTR-1', 'GSTR-3B', 'form', 'furnish', 'due date', 'section 39'])
+        
+        if any(term in query_lower for term in ['due date', 'deadline', 'when']):
+            enhancements.extend(['11th', '13th', '20th', '22nd', 'day of month', 'succeeding'])
+        
+        if any(term in query_lower for term in ['itc', 'input tax credit']):
+            enhancements.extend(['section 16', 'section 17', 'eligible', 'blocked'])
+        
+        if any(term in query_lower for term in ['43b', 'msme', 'payment']):
+            enhancements.extend(['45 days', 'micro small enterprise', 'deduction'])
+        
+        if enhancements:
+            return f"{query} {' '.join(enhancements)}"
+        return query
+    
     def get_relevant_rules(self, query: str, n_results: int = 5) -> str:
         """Get relevant GST rules as formatted text for LLM context."""
         
-        results = self.search(query, n_results)
+        # Enhance query for better GST-specific matching
+        enhanced_query = self._enhance_gst_query(query)
+        results = self.search(enhanced_query, n_results)
         
         if not results:
             return "No relevant rules found."
