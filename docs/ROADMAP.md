@@ -41,16 +41,19 @@ Build an **autonomous AI CFO** for MSMEs that:
 
 ---
 
-## Phase 1: Foundation (Weeks 1-2) ✅ CURRENT
+## Phase 1: Foundation (Weeks 1-2) ✅ COMPLETE
 
 ### Goals
 - [x] Project structure and architecture
 - [x] DuckDB integration for Excel/CSV
-- [x] ChromaDB setup for GST rules
+- [x] ChromaDB setup for GST rules (1,276 chunks)
 - [x] Ollama/Qwen LLM integration
 - [x] Basic Discovery Agent
-- [x] GST rate database (2025)
-- [ ] End-to-end CLI working
+- [x] GST rate database (89 goods + 50 services)
+- [x] End-to-end CLI working
+- [x] GST Basics knowledge (CGST, SGST, ITC, etc.)
+- [x] Guardrails (GSTIN validation)
+- [x] Query enhancement for better search
 
 ### Technical Milestones
 
@@ -89,10 +92,11 @@ db/
 ```
 
 ### Remaining Tasks (Phase 1)
-- [ ] Test Discovery Agent with real Excel files
-- [ ] Ingest GST PDFs into ChromaDB
-- [ ] Fix any import/runtime errors
-- [ ] Basic CLI demo working
+- [x] Test Discovery Agent with real Excel files
+- [x] Ingest GST PDFs into ChromaDB (1,276 chunks)
+- [x] Fix any import/runtime errors
+- [x] Basic CLI demo working
+- [x] GST basics for common questions (CGST, SGST, ITC, etc.)
 
 ---
 

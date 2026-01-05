@@ -223,15 +223,16 @@ LedgerMind is designed to be **safe and reliable**:
 
 ## 📈 Current Status
 
-### What's Working Now ✅
+### ✅ Phase 1 Complete!
 
 | Feature | Status | What You Can Do |
 |---------|--------|-----------------|
 | **Read Excel/CSV** | ✅ Ready | Drop your files, we understand them |
-| **GST Q&A** | ✅ Ready | Ask any GST question |
+| **GST Q&A** | ✅ Ready | Ask about CGST, SGST, ITC, slabs, returns |
 | **Tax Rate Lookup** | ✅ Ready | 89 goods + 50 services |
 | **Compliance Check** | ✅ Ready | Find tax issues |
 | **GSTIN Validation** | ✅ Ready | Verify tax IDs |
+| **Knowledge Base** | ✅ Ready | 1,276 GST rule chunks + Basic definitions |
 
 ### Coming Soon 🚧
 
@@ -290,20 +291,20 @@ You> What is the GST rate on laptops?
 ## 📅 Development Roadmap
 
 ```
-        NOW                    NEXT                   FUTURE
+       DONE ✅                  NOW                   FUTURE
          │                      │                       │
          ▼                      ▼                       ▼
 ┌─────────────────┐   ┌─────────────────┐   ┌─────────────────┐
 │   PHASE 1       │   │   PHASE 2       │   │   PHASE 3 & 4   │
 │   FOUNDATION    │   │   COMPLIANCE    │   │   INTELLIGENCE  │
+│   ✅ COMPLETE   │   │   ◀── NEXT      │   │                 │
 │                 │   │                 │   │                 │
-│ ✅ Read files   │   │ • ITC matching  │   │ • Vendor scores │
-│ ✅ GST Q&A      │   │ • 43B(h) alerts │   │ • Cash forecast │
-│ ✅ Tax rates    │   │ • HSN verify    │   │ • Web dashboard │
-│ ✅ Compliance   │   │ • Audit reports │   │ • PDF exports   │
-│    checks       │   │                 │   │                 │
-│                 │   │                 │   │                 │
-│   ~80% done     │   │   Coming next   │   │   Future        │
+│ ✅ Read files   │   │ • Tax rate      │   │ • Vendor scores │
+│ ✅ GST Q&A      │   │   verification  │   │ • Cash forecast │
+│ ✅ Tax rates    │   │ • 43B(h) alerts │   │ • Web dashboard │
+│ ✅ Knowledge    │   │ • ITC matching  │   │ • PDF exports   │
+│ ✅ Guardrails   │   │ • HSN verify    │   │ • REST API      │
+│ ✅ Agents       │   │ • Audit reports │   │                 │
 └─────────────────┘   └─────────────────┘   └─────────────────┘
 ```
 

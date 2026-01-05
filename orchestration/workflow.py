@@ -238,33 +238,112 @@ SQL Query:"""
             return f"❌ Query failed: {str(e)}"
     
     def _handle_knowledge_query(self, query: Optional[str]) -> str:
-        """Handle query about GST rules/accounting concepts."""
+        """
+        Handle query about GST rules/accounting concepts.
+        
+        Routes to appropriate knowledge source:
+        - Definitions/Concepts → LLM general knowledge
+        - Rate lookups → CSV data
+        - Legal rules → ChromaDB RAG
+        """
         
         if not query:
             return "Please ask a specific question about GST rules or accounting concepts."
         
-        # Search knowledge base
-        relevant_rules = self.knowledge_base.get_relevant_rules(query)
+        # Import query classifier
+        from core.query_classifier import (
+            QueryClassifier, QueryType, 
+            lookup_gst_rate, format_rate_response
+        )
         
-        # Generate response using LLM with context
-        prompt = f"""Answer this question using the provided context.
+        classifier = QueryClassifier()
+        classified = classifier.classify(query)
+        
+        # Route based on classification
+        if classified.query_type == QueryType.RATE_LOOKUP:
+            # Layer 1: CSV lookup for rates
+            item = classified.extracted_entities.get("item", query)
+            rate_info = lookup_gst_rate(item)
+            
+            if rate_info:
+                csv_context = format_rate_response(rate_info, item)
+                prompt = f"""The user asked: "{query}"
+
+Here is the rate information from our database:
+{csv_context}
+
+Provide a helpful response using this data. You can add context about how GST works 
+(CGST/SGST for intra-state, IGST for inter-state) but use the exact rates from above."""
+                
+                response = self.llm.generate(prompt)
+                return f"**Question:** {query}\n\n{response}"
+            else:
+                # Rate not found - try ChromaDB
+                pass
+        
+        elif classified.query_type == QueryType.DEFINITION:
+            # Layer 3: LLM general knowledge for definitions
+            # Don't restrict to context - LLM knows GST basics
+            prompt = f"""You are a GST expert. Answer this question clearly and accurately:
 
 Question: {query}
 
-Relevant Rules and Context:
+Provide a comprehensive but concise answer. Include:
+- Clear definition
+- How it works (if applicable)
+- A simple example (if helpful)
+
+Use your knowledge of Indian GST system. Be accurate and professional."""
+            
+            response = self.llm.generate(prompt)
+            return f"**Question:** {query}\n\n{response}"
+        
+        elif classified.query_type in [QueryType.LEGAL_RULE, QueryType.COMPLIANCE]:
+            # Layer 2: ChromaDB RAG for legal/procedural questions
+            relevant_rules = self.knowledge_base.get_relevant_rules(query)
+            
+            prompt = f"""Answer this question using the provided legal context.
+
+Question: {query}
+
+Relevant Rules and Context from CGST Act/Rules:
 {relevant_rules}
 
 Instructions:
-1. Base your answer ONLY on the provided context
+1. Base your answer on the provided context
 2. Cite specific sections when applicable
-3. If the context doesn't contain the answer, say so
-4. Be concise but complete
+3. If context is insufficient, say what you know and suggest checking official sources
+4. Be accurate - this is legal/tax advice
 
 Answer:"""
-
-        response = self.llm.generate(prompt)
+            
+            response = self.llm.generate(prompt)
+            return f"**Question:** {query}\n\n{response}"
         
-        return f"**Question:** {query}\n\n{response}"
+        else:
+            # General or uncertain - try ChromaDB first, then LLM
+            relevant_rules = self.knowledge_base.get_relevant_rules(query)
+            
+            # Check if we got useful context
+            if relevant_rules and "No relevant rules found" not in relevant_rules:
+                prompt = f"""Answer this question using the provided context.
+
+Question: {query}
+
+Context:
+{relevant_rules}
+
+If the context is helpful, use it. If not, use your general knowledge of GST.
+Be accurate and helpful."""
+            else:
+                prompt = f"""You are a GST expert. Answer this question:
+
+Question: {query}
+
+Provide an accurate, helpful answer based on your knowledge of Indian GST system."""
+            
+            response = self.llm.generate(prompt)
+            return f"**Question:** {query}\n\n{response}"
     
     def _handle_unknown(self, user_input: str) -> str:
         """Handle unknown intent - try general conversation."""
