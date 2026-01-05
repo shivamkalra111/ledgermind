@@ -167,6 +167,30 @@ class TestDataPipeline:
         assert results is not None
 
 
+@pytest.mark.integration
+class TestComplexQueries:
+    """Test handling of complex multi-part questions."""
+    
+    def test_multi_part_question(self, workflow):
+        """Test that complex questions don't return None."""
+        result = workflow.run(
+            "What is CGST and what will be the tax rate of a cigarette? "
+            "As a business owner when do I have to fill the tax?"
+        )
+        
+        # Should never be None
+        assert result is not None
+        assert isinstance(result, str)
+        assert len(result) > 50  # Should have substantial answer
+    
+    def test_rate_not_in_csv(self, workflow):
+        """Test rate lookup for item not in our CSV database."""
+        result = workflow.run("What is the GST rate on gold jewelry?")
+        
+        assert result is not None
+        assert isinstance(result, str)
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v", "-m", "integration"])
 

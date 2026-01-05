@@ -278,8 +278,23 @@ Provide a helpful response using this data. You can add context about how GST wo
                 response = self.llm.generate(prompt)
                 return f"**Question:** {query}\n\n{response}"
             else:
-                # Rate not found - try ChromaDB
-                pass
+                # Rate not found in CSV - use LLM knowledge + ChromaDB
+                relevant_rules = self.knowledge_base.get_relevant_rules(query)
+                prompt = f"""You are a GST expert. Answer this question about GST rates:
+
+Question: {query}
+
+Context from CGST Rules (if relevant):
+{relevant_rules}
+
+If you know the rate, provide it. Include:
+- The applicable GST rate
+- Whether it's 0%, 5%, 12%, 18%, or 28%
+- Any cess if applicable (like on cigarettes, tobacco, luxury items)
+- Mention CGST/SGST for intra-state or IGST for inter-state"""
+
+                response = self.llm.generate(prompt)
+                return f"**Question:** {query}\n\n{response}"
         
         elif classified.query_type == QueryType.DEFINITION:
             # Layer 3: LLM general knowledge for definitions
@@ -296,7 +311,10 @@ Provide a comprehensive but concise answer. Include:
 Use your knowledge of Indian GST system. Be accurate and professional."""
             
             response = self.llm.generate(prompt)
-            return f"**Question:** {query}\n\n{response}"
+            if response:
+                return f"**Question:** {query}\n\n{response}"
+            else:
+                return f"**Question:** {query}\n\nI couldn't generate a response. Please try again."
         
         elif classified.query_type in [QueryType.LEGAL_RULE, QueryType.COMPLIANCE]:
             # Layer 2: ChromaDB RAG for legal/procedural questions
@@ -318,7 +336,10 @@ Instructions:
 Answer:"""
             
             response = self.llm.generate(prompt)
-            return f"**Question:** {query}\n\n{response}"
+            if response:
+                return f"**Question:** {query}\n\n{response}"
+            else:
+                return f"**Question:** {query}\n\nI couldn't find relevant information. Please check official CBIC sources."
         
         else:
             # General or uncertain - try ChromaDB first, then LLM
@@ -343,13 +364,21 @@ Question: {query}
 Provide an accurate, helpful answer based on your knowledge of Indian GST system."""
             
             response = self.llm.generate(prompt)
-            return f"**Question:** {query}\n\n{response}"
+            if response:
+                return f"**Question:** {query}\n\n{response}"
+            else:
+                return f"**Question:** {query}\n\nI apologize, I couldn't generate a response. Please try rephrasing your question."
     
     def _handle_unknown(self, user_input: str) -> str:
         """Handle unknown intent - try general conversation."""
         
-        response = self.llm.generate(user_input)
-        return response
+        try:
+            response = self.llm.generate(user_input)
+            if response:
+                return response
+            return "I couldn't understand that. Try asking about GST, tax rates, or run a compliance check."
+        except Exception as e:
+            return f"❌ Error generating response: {str(e)}"
     
     def _get_help_text(self) -> str:
         """Return help text."""
