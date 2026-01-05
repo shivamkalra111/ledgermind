@@ -4,7 +4,7 @@
 
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Tests: 121 Passing](https://img.shields.io/badge/tests-121%20passing-brightgreen.svg)]()
+[![Tests: 144 Passing](https://img.shields.io/badge/tests-144%20passing-brightgreen.svg)]()
 [![Status: Phase 1](https://img.shields.io/badge/status-Phase%201%20Complete-success.svg)]()
 
 ---
@@ -26,6 +26,8 @@
 - Answers your finance questions in plain language
 
 **100% Private** — Everything runs on your computer. Your data never goes to the cloud.
+
+**🔐 Customer Isolation** — Each company's data is stored separately and securely.
 
 ---
 
@@ -112,6 +114,7 @@ ledgermind/
 │   └── strategist.py              # Gives business advice
 │
 ├── ⚙️ core/                        # The engine room
+│   ├── customer.py                # 🔐 Customer isolation & multi-tenancy
 │   ├── data_engine.py             # Turns Excel into searchable database
 │   ├── knowledge.py               # Stores GST rules for quick lookup
 │   ├── reference_data.py          # Loads tax rates from CSV files
@@ -145,14 +148,19 @@ ledgermind/
 │   └── accounting/                # Accounting standards
 │
 ├── 📂 workspace/                  # YOUR company data goes here
+│   ├── {company_id}/              # Each company has its own folder
+│   │   ├── data/                  # Excel/CSV files
+│   │   ├── {company_id}.duckdb    # Company's database (isolated)
+│   │   └── profile.json           # Company metadata
 │   └── sample_company/            # Example files to try
 │
-├── 🧪 tests/                      # Test suite (121 tests)
+├── 🧪 tests/                      # Test suite (144 tests)
 │   ├── conftest.py                # Shared test fixtures
 │   ├── test_config.py             # Configuration tests
 │   ├── test_reference_data.py     # Data loading tests
 │   ├── test_guardrails.py         # Validation tests
 │   ├── test_query_classifier.py   # Query routing tests
+│   ├── test_customer.py           # 🔐 Customer isolation tests
 │   ├── test_agents.py             # Agent tests
 │   ├── test_orchestration.py      # Workflow tests
 │   └── test_integration.py        # End-to-end tests
@@ -200,7 +208,8 @@ LedgerMind is designed to be **safe and reliable**:
 | **GSTIN Validation** | ✅ Ready | Verify tax IDs |
 | **Knowledge Base** | ✅ Ready | 1,276 GST rule chunks |
 | **Query Classifier** | ✅ Ready | Routes questions to correct source |
-| **Test Suite** | ✅ Ready | 121 tests passing |
+| **Test Suite** | ✅ Ready | 144 tests passing |
+| **Customer Isolation** | ✅ Ready | Each company's data separated |
 
 ### Coming Soon 🚧
 
@@ -320,7 +329,7 @@ LedgerMind knows about:
 > .xlsx, .xls, and .csv files. Any format your accountant uses.
 
 **Q: Can I use it for multiple companies?**
-> Yes! Create separate folders in `workspace/` for each company.
+> Yes! LedgerMind automatically creates separate workspaces for each company. Just run `python main.py` and select "new" to create a new company. Each company has its own database and data folder.
 
 ---
 

@@ -82,6 +82,22 @@ SDM_TABLES = {
 }
 
 # =============================================================================
+# CUSTOMER ISOLATION
+# =============================================================================
+
+# Default customer (used when no customer is selected)
+DEFAULT_CUSTOMER_ID = None  # None = require selection
+
+# Customer workspace structure
+# workspace/{customer_id}/
+#   ├── data/              # Customer's Excel/CSV files
+#   ├── {customer_id}.duckdb  # Customer's database
+#   └── profile.json       # Customer metadata
+
+# Reserved customer IDs (cannot be used)
+RESERVED_CUSTOMER_IDS = {"sample_company", "test", "admin", "system", "default"}
+
+# =============================================================================
 # AGENT SETTINGS
 # =============================================================================
 

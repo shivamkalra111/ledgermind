@@ -4,7 +4,7 @@
 
 **Last Updated:** January 2026  
 **Phase:** 1 (Foundation) ✅ Complete  
-**Tests:** 121 Passing
+**Tests:** 144 Passing
 
 ---
 
@@ -20,6 +20,7 @@ LedgerMind is an **autonomous financial intelligence platform** built on a multi
 4. **Math Safety** — LLM reasons, Python/SQL calculates
 5. **Proper Knowledge Routing** — Each knowledge layer serves its purpose
 6. **Clean Separation** — Config for settings, reference_data for loading
+7. **Customer Isolation** — Each customer's data is completely isolated
 
 ---
 
@@ -254,6 +255,7 @@ ledgermind/
 
 | File | Purpose | Why It Exists |
 |------|---------|---------------|
+| `customer.py` | **Customer isolation** | **Multi-tenant data separation** |
 | `data_engine.py` | DuckDB wrapper - Excel as SQL | Fast analytics on user's financial data |
 | `knowledge.py` | ChromaDB wrapper - RAG for rules | Legal questions need document search |
 | `reference_data.py` | Load CSV data, rate lookups | **Clean separation from config** |
@@ -290,12 +292,13 @@ ledgermind/
 | `test_reference_data.py` | 19 | CSV loading, rate lookups |
 | `test_guardrails.py` | 17 | GSTIN, HSN, tax validation |
 | `test_query_classifier.py` | 20 | Query routing accuracy |
+| `test_customer.py` | **23** | **Customer isolation** |
 | `test_data_engine.py` | 8 | DuckDB operations |
 | `test_knowledge.py` | 7 | ChromaDB search |
 | `test_agents.py` | 10 | Agent initialization |
 | `test_orchestration.py` | 10 | Router, workflow |
 | `test_integration.py` | 20 | End-to-end flows |
-| **Total** | **121** | |
+| **Total** | **144** | |
 
 ---
 
@@ -333,7 +336,59 @@ ledgermind/
 
 ---
 
-## 8. Clean Code Principles
+## 8. Customer Isolation Architecture
+
+### Multi-Tenant Design
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         CUSTOMER ISOLATION                                   │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  SHARED (Read-Only)                │  ISOLATED (Per Customer)              │
+│  ──────────────────                │  ────────────────────────             │
+│                                    │                                        │
+│  📚 knowledge/                     │  📂 workspace/                         │
+│     CGST Act, Rules                │     ├── acme_corp/                    │
+│     (Same for everyone)            │     │   ├── data/                     │
+│                                    │     │   │   └── *.xlsx, *.csv         │
+│  📊 db/                            │     │   ├── acme_corp.duckdb ←────────│
+│     GST rates, MSME limits         │     │   └── profile.json              │
+│     (Reference data)               │     │                                  │
+│                                    │     └── xyz_traders/                  │
+│  🗄️ chroma_db/                     │         ├── data/                     │
+│     Legal document vectors         │         ├── xyz_traders.duckdb       │
+│                                    │         └── profile.json              │
+│                                    │                                        │
+│                                    │  🔒 Each customer queries ONLY their  │
+│                                    │     own DuckDB file                   │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Key Components
+
+| Component | Purpose |
+|-----------|---------|
+| `core/customer.py` | CustomerContext, CustomerManager |
+| `CustomerContext` | Manages one customer's workspace |
+| `CustomerManager` | List, create, delete customers |
+| `profile.json` | Customer metadata (name, GSTIN, type) |
+| `{id}.duckdb` | Customer's isolated database |
+
+### Isolation Guarantee
+
+```python
+# Each workflow is bound to one customer
+workflow = AgentWorkflow(customer=customer_context)
+
+# All queries are automatically scoped
+workflow.run("What are my total sales?")  # Only queries customer's data
+```
+
+---
+
+## 9. Clean Code Principles
 
 ### Config vs Reference Data
 
@@ -373,7 +428,7 @@ For GST rates: Use the rate data provided in context (from our database).
 
 ---
 
-## 9. Test Commands
+## 10. Test Commands
 
 ```bash
 # Run all tests
@@ -396,7 +451,7 @@ print(c.classify('GST rate on milk?'))  # → rate_lookup, csv
 
 ---
 
-## 10. Current Status
+## 11. Current Status
 
 ### Phase 1 Complete ✅
 
@@ -409,7 +464,8 @@ print(c.classify('GST rate on milk?'))  # → rate_lookup, csv
 | 3 Agents | ✅ | All working |
 | LLM Client | ✅ | Ollama connected |
 | Reference Data | ✅ | 6 CSV files |
-| Tests | ✅ | 121 passing |
+| **Customer Isolation** | ✅ | **Multi-tenant ready** |
+| Tests | ✅ | **144 passing** |
 
 ---
 

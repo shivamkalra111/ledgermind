@@ -1,9 +1,13 @@
 """
 Agent Workflow - Orchestrates the multi-agent system
 Uses LangGraph for agent coordination
+
+CUSTOMER ISOLATION:
+Each workflow instance is bound to a specific customer.
+All data operations are scoped to that customer's DuckDB.
 """
 
-from typing import Dict, Any, Optional, TypedDict, Annotated
+from typing import Dict, Any, Optional, TypedDict, Annotated, TYPE_CHECKING
 from dataclasses import dataclass
 from pathlib import Path
 from enum import Enum
@@ -16,6 +20,9 @@ from core.data_engine import DataEngine
 from core.knowledge import KnowledgeBase
 from llm.client import LLMClient
 from config import SYSTEM_PROMPT
+
+if TYPE_CHECKING:
+    from core.customer import CustomerContext
 
 
 class WorkflowState(TypedDict):
@@ -35,19 +42,41 @@ class AgentWorkflow:
     """
     Orchestrates the multi-agent workflow.
     
+    CUSTOMER ISOLATION:
+    - Each workflow instance is bound to a specific customer
+    - data_engine connects to customer's DuckDB (not shared)
+    - knowledge_base is shared (read-only reference data)
+    
     Flow:
     1. User input → Intent Router
     2. Based on intent, route to appropriate agent(s)
     3. Aggregate results → Generate response
     """
     
-    def __init__(self):
-        # Initialize shared resources
-        self.data_engine = DataEngine()
+    def __init__(self, customer: Optional["CustomerContext"] = None):
+        """
+        Initialize workflow with customer context.
+        
+        Args:
+            customer: CustomerContext for data isolation.
+                     If None, uses global DuckDB (legacy mode).
+        """
+        self.customer = customer
+        
+        # Initialize shared resources (read-only, shared across customers)
         self.knowledge_base = KnowledgeBase()
         self.llm = LLMClient()
         
-        # Initialize agents
+        # Initialize customer-specific data engine
+        if customer:
+            self.data_engine = customer.get_data_engine()
+            self._data_dir = customer.data_dir
+        else:
+            # Legacy mode - global database
+            self.data_engine = DataEngine()
+            self._data_dir = None
+        
+        # Initialize agents with customer-scoped data engine
         self.discovery_agent = DiscoveryAgent(self.data_engine, self.llm)
         self.compliance_agent = ComplianceAgent(self.data_engine, self.knowledge_base, self.llm)
         self.strategist_agent = StrategistAgent(self.data_engine, self.llm)
@@ -57,6 +86,11 @@ class AgentWorkflow:
         
         # Track state
         self._data_loaded = False
+    
+    @property
+    def customer_id(self) -> Optional[str]:
+        """Get current customer ID."""
+        return self.customer.customer_id if self.customer else None
     
     def run(self, user_input: str) -> str:
         """
@@ -101,8 +135,16 @@ class AgentWorkflow:
     def _handle_folder_analysis(self, folder_path: Optional[str]) -> str:
         """Handle folder analysis request."""
         
+        # If no path provided and customer has data dir, use that
         if not folder_path:
-            return "Please provide a folder path to analyze. Example: `/path/to/your/excels/`"
+            if self._data_dir and self._data_dir.exists():
+                folder_path = str(self._data_dir)
+            else:
+                return "Please provide a folder path to analyze. Example: `analyze data` or `analyze folder /path/to/excels/`"
+        
+        # Handle "data" as shorthand for customer's data directory
+        if folder_path.lower() == "data" and self._data_dir:
+            folder_path = str(self._data_dir)
         
         path = Path(folder_path).expanduser()
         
@@ -383,14 +425,25 @@ Provide an accurate, helpful answer based on your knowledge of Indian GST system
     def _get_help_text(self) -> str:
         """Return help text."""
         
-        return """
+        # Customer-aware help
+        if self.customer:
+            data_path = self.customer.data_dir
+            company_name = self.customer.profile.company_name
+            customer_info = f"""
+### 🏢 Current Company: {company_name}
+Data folder: `{data_path}`
+"""
+        else:
+            customer_info = ""
+        
+        return f"""
 ## 🤖 LedgerMind - AI CFO Assistant
-
+{customer_info}
 ### Available Commands:
 
 **📁 Folder Analysis**
-- `analyze folder /path/to/excels/` - Load and analyze your Excel/CSV files
-- `scan ~/Documents/finances/` - Same as above
+- `analyze data` - Analyze your company's data folder
+- `analyze folder /path/to/excels/` - Analyze a specific folder
 
 **✅ Compliance Check**
 - `run compliance check` - Check for GST compliance issues
@@ -400,14 +453,18 @@ Provide an accurate, helpful answer based on your knowledge of Indian GST system
 - `analyze vendors` - Get vendor reliability rankings
 - `forecast cash flow` - Get cash flow predictions
 
+**🔄 Company Management**
+- `switch company` - Change to a different company
+- `company` - Show current company info
+
 **❓ Questions**
 - Ask about your data: "What's my total sales this month?"
 - Ask about GST rules: "What is the ITC time limit?"
 
 ### Tips:
-1. First, load your data with `analyze folder /path/`
-2. Then run `compliance check` or `strategic analysis`
-3. Ask questions about your data or GST rules anytime
+1. Place your Excel/CSV files in your company's data folder
+2. Run `analyze data` to load them
+3. Then run `compliance check` or ask questions
 
 Type your question or command below!
 """
