@@ -1,6 +1,8 @@
 # LedgerMind - Development Roadmap
 
-> End-to-end technical roadmap for building the Agentic AI CFO Platform
+> End-to-end technical roadmap for the Agentic AI CFO Platform
+
+**Last Updated:** January 2026
 
 ---
 
@@ -23,383 +25,338 @@ Build an **autonomous AI CFO** for MSMEs that:
 │                                                                             │
 │  PHASE 1          PHASE 2          PHASE 3          PHASE 4                │
 │  Foundation       Compliance       Intelligence     Production             │
-│  [2 weeks]        [3 weeks]        [3 weeks]        [2 weeks]              │
+│  ✅ COMPLETE      ◀── NEXT         Planned          Future                 │
 │                                                                             │
 │  ┌─────────┐      ┌─────────┐      ┌─────────┐      ┌─────────┐           │
 │  │ DuckDB  │      │ Tax     │      │ Cash    │      │ Web UI  │           │
-│  │ Setup   │      │ Checks  │      │ Flow    │      │         │           │
-│  │         │──────│         │──────│ Predict │──────│ Deploy  │           │
-│  │ Discovery│     │ ITC     │      │         │      │         │           │
-│  │ Agent   │      │ Verify  │      │ Vendor  │      │ API     │           │
-│  │         │      │         │      │ Score   │      │         │           │
-│  │ ChromaDB│      │ 43B(h)  │      │         │      │ Reports │           │
+│  │ ChromaDB│      │ Rate    │      │ Flow    │      │ Reports │           │
+│  │ 3 Agents│──────│ Verify  │──────│ Predict │──────│ API     │           │
+│  │ Query   │      │ ITC     │      │ Vendor  │      │ Deploy  │           │
+│  │ Classify│      │ 43B(h)  │      │ Score   │      │         │           │
 │  └─────────┘      └─────────┘      └─────────┘      └─────────┘           │
 │                                                                             │
-│  ◀─── WE ARE HERE                                                          │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Phase 1: Foundation (Weeks 1-2) ✅ COMPLETE
+## Phase 1: Foundation ✅ COMPLETE
 
-### Goals
-- [x] Project structure and architecture
-- [x] DuckDB integration for Excel/CSV
-- [x] ChromaDB setup for GST rules (1,276 chunks)
-- [x] Ollama/Qwen LLM integration
-- [x] Basic Discovery Agent
-- [x] GST rate database (89 goods + 50 services)
-- [x] End-to-end CLI working
-- [x] GST Basics knowledge (CGST, SGST, ITC, etc.)
-- [x] Guardrails (GSTIN validation)
-- [x] Query enhancement for better search
+### Summary
 
-### Technical Milestones
+| Metric | Target | Achieved |
+|--------|--------|----------|
+| Core Modules | 14 | ✅ 14 |
+| Reference Data | 3 CSVs | ✅ 5 files |
+| Knowledge Chunks | 500+ | ✅ 1,276 |
+| Guardrails | 5 | ✅ 10 |
+| Agents | 3 | ✅ 3 |
 
-#### 1.1 Data Engine (DuckDB)
+### What Was Built
+
+#### Core Infrastructure
+
+| File | Purpose | Status |
+|------|---------|--------|
+| `core/data_engine.py` | DuckDB integration - Excel as SQL | ✅ |
+| `core/knowledge.py` | ChromaDB RAG for legal documents | ✅ |
+| `core/query_classifier.py` | Routes queries to correct knowledge source | ✅ |
+| `core/guardrails.py` | Input validation, safety checks | ✅ |
+| `core/metrics.py` | Performance tracking | ✅ |
+| `core/schema.py` | Standard Data Model definitions | ✅ |
+| `core/mapper.py` | Header mapping logic | ✅ |
+
+#### Agents
+
+| File | Purpose | Status |
+|------|---------|--------|
+| `agents/discovery.py` | Scan files, map headers, create tables | ✅ |
+| `agents/compliance.py` | Tax compliance checking framework | ✅ |
+| `agents/strategist.py` | Strategic analysis framework | ✅ |
+
+#### Orchestration
+
+| File | Purpose | Status |
+|------|---------|--------|
+| `orchestration/router.py` | Intent classification | ✅ |
+| `orchestration/workflow.py` | Agent coordination with query routing | ✅ |
+
+#### Reference Data
+
+| File | Contents | Status |
+|------|----------|--------|
+| `db/gst_rates/goods_rates_2025.csv` | 89 HSN codes with rates | ✅ |
+| `db/gst_rates/services_rates_2025.csv` | 50 SAC codes with rates | ✅ |
+| `db/gst_rates/blocked_credits_17_5.csv` | 15 Section 17(5) items | ✅ |
+| `db/msme_classification.csv` | Micro/Small/Medium thresholds | ✅ |
+| `db/state_codes.csv` | 38 GST state codes | ✅ |
+
+#### Knowledge Base
+
+| Source | Chunks | Status |
+|--------|--------|--------|
+| CGST Act 2017 | 601 | ✅ |
+| CGST Rules 2017 | 675 | ✅ |
+| **Total** | **1,276** | ✅ |
+
+### Technical Achievements
+
+#### Query Classifier (Proper Architecture)
+
+Instead of hardcoded Q&A, we built a proper knowledge routing system:
+
 ```python
-# Target capabilities
-engine.load_excel("sales.xlsx")           # ✅ Done
-engine.load_csv("purchases.csv")          # ✅ Done
-engine.query("SELECT SUM(total) FROM sales")  # ✅ Done
-engine.load_folder("/path/to/company/")   # ✅ Done
+# core/query_classifier.py classifies queries:
+"What is CGST?"        → DEFINITION    → LLM general knowledge
+"GST rate on milk?"    → RATE_LOOKUP   → CSV lookup
+"Due date for GSTR-3B" → LEGAL_RULE    → ChromaDB RAG
+"My total sales"       → DATA_QUERY    → DuckDB
 ```
 
-#### 1.2 Knowledge Base (ChromaDB)
+#### Guardrails (10 Methods)
+
 ```python
-# Target capabilities
-kb.ingest_pdf("gst_act.pdf")              # ✅ Done
-kb.search("ITC eligibility")              # ✅ Done
-kb.get_relevant_rules("blocked credits")  # ✅ Done
+# Input validation
+validate_gstin()           # GSTIN format check
+validate_hsn_code()        # HSN format (4/6/8 digits)
+validate_invoice_number()  # Invoice format
+validate_date()            # Date validity
+validate_amount()          # Amount bounds
+
+# Business rules
+validate_tax_calculation() # CGST + SGST = Total
+validate_itc_time_limit()  # Section 16(4)
+validate_section_43b_h()   # 45-day MSME payment
+
+# LLM safety
+validate_llm_response_no_math()       # No arithmetic
+validate_llm_response_has_citation()  # Sources required
 ```
 
-#### 1.3 Discovery Agent
-```python
-# Target capabilities
-agent.discover("/path/to/folder")         # ✅ Done
-# Returns: tables created, header mappings, sheet types
-```
+### Test Results
 
-#### 1.4 Reference Data
 ```
-db/
-├── gst_rates_2025.json                   # ✅ Done (89 goods, 50 services)
-├── gst_rates/goods_rates_2025.csv        # ✅ Done
-├── gst_rates/services_rates_2025.csv     # ✅ Done
-├── msme_classification.csv               # ✅ Done
-└── state_codes.csv                       # ✅ Done
+✅ All 14 modules import successfully
+✅ Reference data: 89 goods, 50 services, 15 blocked
+✅ ChromaDB: 1,276 chunks searchable
+✅ DuckDB: Connected with 3 tables
+✅ Guardrails: 10 validation methods
+✅ Query Classifier: 4 types correctly classified
+✅ LLM: Ollama connected
 ```
-
-### Remaining Tasks (Phase 1)
-- [x] Test Discovery Agent with real Excel files
-- [x] Ingest GST PDFs into ChromaDB (1,276 chunks)
-- [x] Fix any import/runtime errors
-- [x] Basic CLI demo working
-- [x] GST basics for common questions (CGST, SGST, ITC, etc.)
 
 ---
 
-## Phase 2: Compliance Engine (Weeks 3-5)
+## Phase 2: Compliance Engine (Next)
 
 ### Goals
-- [ ] Tax rate verification against GST 2025
-- [ ] ITC eligibility checks
-- [ ] Section 17(5) blocked credit detection
-- [ ] Section 43B(h) payment monitoring
-- [ ] Compliance report generation
+
+Build the actual compliance checking logic that makes LedgerMind valuable.
+
+| Feature | Description | Business Value |
+|---------|-------------|----------------|
+| Tax Rate Verification | Compare charged vs correct rate | Find overpaid GST |
+| Section 43B(h) Monitoring | Track MSME payment deadlines | Avoid disallowed deductions |
+| Section 17(5) Detection | Flag blocked ITC claims | Prevent reversals |
+| ITC Reconciliation | Match with GSTR-2A/2B | Ensure claimable credits |
+| Compliance Report | Actionable audit summary | One-click audit prep |
 
 ### Technical Milestones
 
 #### 2.1 Tax Rate Verification
+
 ```python
-# Compare charged rate vs correct rate
-def check_tax_rates(transactions: DataFrame) -> List[Issue]:
+# Implement in agents/compliance.py
+def check_tax_rates(self) -> List[ComplianceIssue]:
+    """Compare charged GST rate against correct rate from db/."""
+    
+    transactions = self.data_engine.query("""
+        SELECT * FROM sdm_sales_register
+        WHERE hsn_code IS NOT NULL
+    """)
+    
+    issues = []
     for txn in transactions:
-        hsn = txn.hsn_code
-        charged_rate = txn.gst_rate
-        correct_rate = get_rate_for_hsn(hsn)
-        
-        if charged_rate != correct_rate:
-            yield TaxRateMismatch(
-                item=txn.description,
-                charged=charged_rate,
-                correct=correct_rate,
-                savings=(charged_rate - correct_rate) * txn.taxable_value
-            )
+        correct_rate = get_rate_for_hsn(txn.hsn_code)
+        if correct_rate and txn.gst_rate != correct_rate['rate']:
+            issues.append(ComplianceIssue(
+                issue_type="tax_rate_mismatch",
+                severity="warning",
+                description=f"HSN {txn.hsn_code}: Charged {txn.gst_rate}%, correct is {correct_rate['rate']}%",
+                amount_impact=(txn.gst_rate - correct_rate['rate']) / 100 * txn.taxable_value
+            ))
+    
+    return issues
 ```
 
-#### 2.2 ITC Verification
-```python
-# Check ITC eligibility
-def verify_itc(purchase: Dict) -> ITCStatus:
-    # Check vendor GSTIN validity
-    # Check if blocked under Section 17(5)
-    # Check time limit (Section 16(4))
-    # Return: eligible / blocked / expired
-```
+#### 2.2 Section 43B(h) Monitoring
 
-#### 2.3 Section 43B(h) Monitoring
 ```python
-# Flag overdue payments to MSMEs
-def check_43b_h(purchases: DataFrame, payments: DataFrame) -> List[Issue]:
+def check_section_43b_h(self) -> List[ComplianceIssue]:
+    """Flag payments to MSMEs overdue by >45 days."""
+    
+    purchases = self.data_engine.query("""
+        SELECT vendor_name, vendor_gstin, invoice_date, total_value, payment_date
+        FROM sdm_purchase_ledger
+    """)
+    
+    issues = []
     for purchase in purchases:
-        if is_msme_vendor(purchase.vendor):
-            days_since_invoice = (today - purchase.date).days
-            if days_since_invoice > 45 and not is_paid(purchase):
-                yield OverduePayment(
-                    vendor=purchase.vendor,
-                    amount=purchase.total,
-                    days_overdue=days_since_invoice - 45,
-                    consequence="Expense disallowed under Section 43B(h)"
-                )
+        if is_msme_vendor(purchase.vendor_gstin):
+            days_since = (date.today() - purchase.invoice_date).days
+            if days_since > 45 and not purchase.payment_date:
+                issues.append(ComplianceIssue(
+                    issue_type="section_43b_h",
+                    severity="critical",
+                    description=f"Payment to {purchase.vendor_name} overdue by {days_since - 45} days",
+                    amount_impact=purchase.total_value,  # Disallowed expense
+                    recommendation="Pay within 45 days to claim expense deduction"
+                ))
+    
+    return issues
 ```
 
-#### 2.4 Compliance Report
+#### 2.3 Section 17(5) Detection
+
 ```python
-@dataclass
-class ComplianceReport:
-    issues: List[ComplianceIssue]
-    tax_savings_found: float
-    risk_amount: float
+def check_blocked_credits(self) -> List[ComplianceIssue]:
+    """Detect ITC claims on blocked items."""
     
-    by_category: Dict[str, List[Issue]]
-    # - tax_rate_mismatch
-    # - blocked_credit
-    # - overdue_payment
-    # - invalid_gstin
+    blocked_items = load_blocked_credits()  # From db/gst_rates/blocked_credits_17_5.csv
     
-    recommendations: List[str]
-    summary: str
+    purchases = self.data_engine.query("""
+        SELECT * FROM sdm_purchase_ledger
+        WHERE cgst_amount > 0 OR sgst_amount > 0
+    """)
+    
+    issues = []
+    for purchase in purchases:
+        for blocked in blocked_items:
+            if blocked['keyword'] in purchase.description.lower():
+                issues.append(ComplianceIssue(
+                    issue_type="blocked_credit",
+                    severity="warning",
+                    description=f"ITC on '{purchase.description}' blocked under Section 17(5)",
+                    amount_impact=purchase.cgst_amount + purchase.sgst_amount,
+                    reference=f"Section 17(5): {blocked['reason']}"
+                ))
+    
+    return issues
 ```
 
 ### Deliverables
-- [ ] `agents/compliance.py` fully implemented
-- [ ] Tax rate checker with HSN/SAC lookup
-- [ ] Section 17(5) blocked credit detector
-- [ ] Section 43B(h) payment tracker
-- [ ] PDF compliance report generator
+
+- [ ] `check_tax_rates()` fully implemented
+- [ ] `check_section_43b_h()` with MSME verification
+- [ ] `check_blocked_credits()` with 15 blocked categories
+- [ ] Compliance report generation
+- [ ] Integration tests with sample data
 
 ---
 
-## Phase 3: Strategic Intelligence (Weeks 6-8)
+## Phase 3: Strategic Intelligence
 
 ### Goals
-- [ ] Vendor reliability scoring
-- [ ] MSME vendor identification
-- [ ] Cash flow forecasting
-- [ ] Profit margin analysis
-- [ ] Tax liability projection
 
-### Technical Milestones
+| Feature | Description |
+|---------|-------------|
+| Vendor Scoring | Reliability score based on payment history |
+| MSME Verification | Check if vendor is MSME for 43B(h) |
+| Cash Flow Forecast | Predict next 3 months |
+| Profit Analysis | Margin by product/customer |
 
-#### 3.1 Vendor Analysis
+### Technical Details
+
 ```python
 @dataclass
 class VendorScore:
     vendor_name: str
     gstin: str
-    
-    # Reliability metrics
     total_transactions: int
     total_value: float
     avg_payment_days: float
-    on_time_delivery_rate: float
-    
-    # Compliance metrics
     is_msme: bool
-    msme_category: str  # micro/small/medium
-    gstin_status: str   # active/cancelled/suspended
-    
-    # Risk score
     reliability_score: float  # 0-100
-    risk_factors: List[str]
 ```
-
-#### 3.2 Cash Flow Forecasting
-```python
-def forecast_cash_flow(
-    sales_history: DataFrame,
-    purchase_history: DataFrame,
-    months: int = 3
-) -> List[CashFlowForecast]:
-    
-    # Analyze historical patterns
-    monthly_sales = aggregate_monthly(sales_history)
-    monthly_purchases = aggregate_monthly(purchase_history)
-    
-    # Apply seasonality
-    # Project forward
-    # Estimate tax liability
-    
-    return forecasts
-```
-
-#### 3.3 Profit Analysis
-```python
-def analyze_profit_margins(
-    sales: DataFrame,
-    purchases: DataFrame
-) -> ProfitAnalysis:
-    
-    # By product/service
-    # By customer segment
-    # By time period
-    # After GST adjustment
-```
-
-### Deliverables
-- [ ] `agents/strategist.py` fully implemented
-- [ ] Vendor scoring algorithm
-- [ ] MSME status checker (via API or manual input)
-- [ ] Cash flow projection model
-- [ ] Profit margin dashboard data
 
 ---
 
-## Phase 4: Production (Weeks 9-10)
+## Phase 4: Production
 
 ### Goals
-- [ ] Web UI (FastAPI + React/HTMX)
-- [ ] Report generation (PDF/Excel)
-- [ ] Multi-company support
-- [ ] API for integrations
-- [ ] Deployment package
 
-### Technical Milestones
-
-#### 4.1 Web UI
-```
-Frontend:
-├── Dashboard (summary cards)
-├── Upload (drag-drop Excel/CSV)
-├── Compliance (issues list)
-├── Vendors (ranking table)
-├── Forecast (charts)
-└── Settings (company profile)
-```
-
-#### 4.2 API Design
-```python
-# FastAPI endpoints
-POST /api/analyze          # Upload and analyze folder
-GET  /api/compliance       # Get compliance report
-GET  /api/vendors          # Get vendor rankings
-GET  /api/forecast         # Get cash flow forecast
-POST /api/query            # Natural language query
-GET  /api/reports/{type}   # Download report
-```
-
-#### 4.3 Report Generation
-```python
-def generate_report(report_type: str, data: Dict) -> bytes:
-    # Types: compliance_pdf, vendor_excel, forecast_pdf
-    # Use reportlab for PDF
-    # Use openpyxl for Excel
-```
-
-### Deliverables
-- [ ] Web UI with all features
-- [ ] PDF report generation
-- [ ] Excel export
-- [ ] Docker deployment
-- [ ] User documentation
-
----
-
-## Technical Specifications
-
-### Performance Targets
-
-| Operation | Target Time | Current |
-|-----------|-------------|---------|
-| Load 10 Excel files | < 5s | TBD |
-| Compliance scan (1000 txns) | < 10s | TBD |
-| Knowledge query | < 3s | TBD |
-| Cash flow forecast | < 5s | TBD |
-
-### Accuracy Targets
-
-| Check | Target | Notes |
-|-------|--------|-------|
-| Tax rate matching | 95% | HSN/SAC coverage |
-| Sheet type detection | 90% | LLM classification |
-| Header mapping | 85% | SDM field mapping |
-| ITC eligibility | 98% | Section 17(5) rules |
-
-### Scale Targets
-
-| Metric | Target |
-|--------|--------|
-| Files per folder | 50+ |
-| Rows per file | 100,000+ |
-| Concurrent queries | 10+ |
-| Knowledge base size | 1000+ chunks |
-
----
-
-## Risk Mitigation
-
-### Technical Risks
-
-| Risk | Mitigation |
-|------|------------|
-| LLM hallucination | JSON mode, validation, SQL for math |
-| Slow DuckDB on large files | Indexing, chunked loading |
-| ChromaDB memory usage | Persistent storage, lazy loading |
-| Header mapping errors | User confirmation, learning |
-
-### Business Risks
-
-| Risk | Mitigation |
-|------|------------|
-| GST rate changes | Versioned db/, update scripts |
-| MSME definition changes | Configurable thresholds |
-| New compliance rules | Pluggable rule system |
+| Feature | Description |
+|---------|-------------|
+| Web UI | FastAPI + Modern frontend |
+| Reports | PDF/Excel export |
+| API | REST endpoints for integration |
+| Multi-company | Separate workspaces |
 
 ---
 
 ## Success Criteria
 
-### Phase 1 (Foundation)
-- [ ] Can load any Excel/CSV folder
-- [ ] Can query data with SQL
-- [ ] Can answer GST questions via RAG
-- [ ] CLI works end-to-end
+### Phase 1 ✅ (Complete)
 
-### Phase 2 (Compliance)
-- [ ] Identifies 90% of tax rate mismatches
+- [x] Can load any Excel/CSV folder
+- [x] Can query data with SQL
+- [x] Can answer GST questions (definitions, rates, rules)
+- [x] Query classifier routes to correct source
+- [x] Guardrails validate inputs
+- [x] CLI works end-to-end
+
+### Phase 2 (Next)
+
+- [ ] Identifies 90%+ of tax rate mismatches
 - [ ] Catches all Section 17(5) blocked credits
 - [ ] Tracks 43B(h) compliance accurately
 - [ ] Generates actionable compliance report
 
-### Phase 3 (Intelligence)
-- [ ] Vendor scores correlate with payment behavior
+### Phase 3 (Planned)
+
+- [ ] Vendor scores correlate with behavior
 - [ ] Cash flow forecast within 20% accuracy
 - [ ] Profit analysis matches manual calculation
-- [ ] Recommendations are actionable
 
-### Phase 4 (Production)
+### Phase 4 (Future)
+
 - [ ] Web UI loads in < 2s
 - [ ] Reports generate in < 10s
-- [ ] System handles 10 concurrent users
 - [ ] Zero data leaks (local only)
 
 ---
 
-## Next Steps (Immediate)
+## Immediate Next Steps
 
-### This Week
-1. **Test Discovery Agent** with sample Excel files
-2. **Ingest GST PDFs** into ChromaDB
-3. **Fix runtime errors** in workflow
-4. **Create sample data** for testing
+### This Week (Phase 2 Start)
 
-### Next Week
-1. **Implement tax rate checker** with full HSN lookup
-2. **Add Section 17(5) detection**
-3. **Build compliance report generator**
-4. **Test with real company data**
+1. **Implement `check_tax_rates()`**
+   - Load transactions from DuckDB
+   - Look up correct rate from CSV
+   - Flag mismatches with amount impact
+
+2. **Implement `check_section_43b_h()`**
+   - Load purchases
+   - Calculate days since invoice
+   - Flag overdue MSME payments
+
+3. **Test with sample data**
+   - Run compliance check
+   - Verify issues detected
+   - Calculate savings/risk
+
+### Commands to Test
+
+```bash
+# Analyze sample data
+python main.py "analyze folder workspace/sample_company/"
+
+# Run compliance check
+python main.py "run compliance check"
+
+# Ask about rules
+python main.py "What is Section 43B(h)?"
+```
 
 ---
 
@@ -414,9 +371,7 @@ def generate_report(report_type: str, data: Dict) -> bytes:
 - [GST Notifications](https://www.gst.gov.in/)
 - [DuckDB Docs](https://duckdb.org/docs/)
 - [ChromaDB Docs](https://docs.trychroma.com/)
-- [Ollama Docs](https://ollama.ai/)
 
 ---
 
 *Last Updated: January 2026*
-
