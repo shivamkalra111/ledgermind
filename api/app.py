@@ -17,7 +17,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from api.models import HealthResponse
-from api.routes import upload_router, query_router
+from api.routes import upload_router, files_router, query_router
 from llm.client import LLMClient
 from core.knowledge import KnowledgeBase
 
@@ -200,8 +200,9 @@ async def root():
     }
 
 
-# Include routers - just 2!
+# Include routers
 app.include_router(upload_router, prefix="/api/v1")
+app.include_router(files_router, prefix="/api/v1")
 app.include_router(query_router, prefix="/api/v1")
 
 
