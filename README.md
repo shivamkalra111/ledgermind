@@ -141,6 +141,15 @@ Think of LedgerMind as having **3 AI employees** working for you:
 ```
 ledgermind/
 │
+├── 🌐 api/                        # NEW: FastAPI backend (Phase 1B)
+│   ├── main.py                    # FastAPI app entry
+│   ├── routes/                    # API endpoints
+│   └── middleware/                # Auth middleware
+│
+├── 🖥️ ui/                         # NEW: Streamlit frontend (Phase 1B)
+│   ├── app.py                     # Streamlit app entry
+│   └── pages/                     # Login, dashboard, upload
+│
 ├── 🤖 agents/                     # The 3 AI workers
 │   ├── discovery.py               # Reads and organizes your files
 │   ├── compliance.py              # Checks tax rules
@@ -253,23 +262,41 @@ LedgerMind is designed to be **safe and reliable**:
 
 | Limitation | Description | Planned For |
 |------------|-------------|-------------|
-| **SQL Generation** | Uses general-purpose LLM (`qwen2.5`) for Text-to-SQL. Works but could be more accurate. | Phase 2: Use `sqlcoder` model |
-| **Authentication** | Company-based isolation (local CLI). No API keys or user accounts. | Phase 2: User-based API auth |
-| **Complex Queries** | Some natural language queries may need rephrasing. | Phase 2: Specialized SQL model |
+| **No User Auth** | CLI shows all companies (security risk) | Phase 1B: API + Streamlit |
+| **SQL Generation** | Uses general-purpose LLM for SQL | Phase 2: `sqlcoder` model |
+| **CLI Only** | No web interface | Phase 1B: Streamlit UI |
+
+### 🚀 Next: Phase 1B — API + Streamlit (Immediate)
+
+**Why?** The current CLI shows ALL companies to any user — **security risk**.
+
+| Feature | Priority | Description |
+|---------|----------|-------------|
+| **FastAPI Backend** | P0 | REST API for all operations |
+| **User Authentication** | P0 | API key based, user-specific data |
+| **Streamlit Frontend** | P0 | Web UI with login |
+| **Remove CLI Selection** | P0 | Fix security vulnerability |
+
+```
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+│  Streamlit  │ ──▶ │   FastAPI   │ ──▶ │  User Data  │
+│     UI      │     │   Backend   │     │  (Isolated) │
+└─────────────┘     └─────────────┘     └─────────────┘
+```
 
 ### Coming Soon 🚧
 
 | Feature | Phase | Description |
 |---------|-------|-------------|
+| **FastAPI + Streamlit** | Phase 1B | Web app with auth |
+| **User Registration** | Phase 1B | Sign up / login |
+| **API Key Access** | Phase 1B | Secure programmatic access |
 | **Specialized SQL Model** | Phase 2 | Use `sqlcoder` for better query accuracy |
-| **User Authentication** | Phase 2 | API key based access for multi-user security |
 | **ITC Reconciliation** | Phase 2 | Match your purchases with GSTR-2B |
 | **43B(h) Alerts** | Phase 2 | Warn before MSME payment deadlines |
 | **Vendor Scoring** | Phase 3 | Rate vendors by reliability |
 | **Cash Flow Forecast** | Phase 3 | Predict next 3 months |
-| **Web Interface** | Phase 4 | Beautiful dashboard |
-| **REST API** | Phase 4 | Access via HTTP endpoints |
-| **PDF Reports** | Phase 4 | Export audit reports |
+| **PDF Reports** | Phase 3 | Export audit reports |
 
 ---
 
@@ -328,23 +355,22 @@ pytest tests/test_guardrails.py -v
 ## 📅 Development Roadmap
 
 ```
-       DONE ✅                  NOW                   FUTURE
+       DONE ✅                 NOW ◀──               FUTURE
          │                      │                       │
          ▼                      ▼                       ▼
-┌─────────────────┐   ┌─────────────────┐   ┌─────────────────┐
-│   PHASE 1       │   │   PHASE 2       │   │   PHASE 3 & 4   │
-│   FOUNDATION    │   │   COMPLIANCE    │   │   INTELLIGENCE  │
-│   ✅ COMPLETE   │   │   ◀── NEXT      │   │                 │
-│                 │   │                 │   │                 │
-│ ✅ Read files   │   │ • SQL model     │   │ • Vendor scores │
-│ ✅ GST Q&A      │   │   (sqlcoder)    │   │ • Cash forecast │
-│ ✅ Tax rates    │   │ • User auth     │   │ • Web dashboard │
-│ ✅ Knowledge    │   │   (API keys)    │   │ • PDF exports   │
-│ ✅ Guardrails   │   │ • Tax verify    │   │ • REST API      │
-│ ✅ Tests (166)  │   │ • 43B(h) alerts │   │                 │
-│ ✅ Customer     │   │ • ITC matching  │   │                 │
-│   isolation     │   │ • Audit reports │   │                 │
-└─────────────────┘   └─────────────────┘   └─────────────────┘
+┌─────────────────┐   ┌─────────────────┐   ┌─────────────────┐   ┌───────────────┐
+│   PHASE 1       │   │   PHASE 1B      │   │   PHASE 2       │   │  PHASE 3      │
+│   FOUNDATION    │   │   API + UI      │   │   COMPLIANCE    │   │  INTELLIGENCE │
+│   ✅ COMPLETE   │   │   ◀── NEXT      │   │                 │   │               │
+│                 │   │                 │   │                 │   │               │
+│ ✅ Read files   │   │ • FastAPI       │   │ • SQL model     │   │ • Vendor      │
+│ ✅ GST Q&A      │   │ • Streamlit UI  │   │   (sqlcoder)    │   │   scores      │
+│ ✅ Tax rates    │   │ • User auth     │   │ • Tax verify    │   │ • Cash flow   │
+│ ✅ Knowledge    │   │ • API keys      │   │ • 43B(h) alerts │   │   forecast    │
+│ ✅ Guardrails   │   │ • Login/signup  │   │ • ITC matching  │   │ • PDF exports │
+│ ✅ Tests (166)  │   │ • Fix CLI       │   │ • Audit reports │   │               │
+│ ✅ Data isolate │   │   security      │   │                 │   │               │
+└─────────────────┘   └─────────────────┘   └─────────────────┘   └───────────────┘
 ```
 
 ---
@@ -383,10 +409,13 @@ LedgerMind knows about:
 > Yes! LedgerMind automatically creates separate workspaces for each company. Just run `python main.py` and select "new" to create a new company. Each company has its own database and data folder.
 
 **Q: Is there an API I can use?**
-> Not yet. Phase 1 is CLI-only. Phase 2 will add REST API with API key authentication for secure multi-user access.
+> Coming in Phase 1B (immediate next). FastAPI backend + Streamlit UI with proper user authentication.
 
 **Q: What if my queries don't work well?**
 > Phase 1 uses a general-purpose LLM. Try rephrasing your question, or ask "show my data" to see available tables. Phase 2 will use a specialized SQL model for better accuracy.
+
+**Q: Is the current CLI secure for production?**
+> No. The CLI shows all companies which is a security risk. Phase 1B adds proper user authentication so each user sees only their data.
 
 ---
 

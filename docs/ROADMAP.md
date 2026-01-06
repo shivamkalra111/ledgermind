@@ -159,7 +159,138 @@ validate_llm_response_has_citation()  # Sources required
 
 ---
 
-## Phase 2: Compliance Engine (Next)
+## Phase 1B: API + Authentication (IMMEDIATE NEXT)
+
+### Why This is Critical
+
+**Current Problem:** The CLI shows ALL companies to ANY user running it.
+This is a **security flaw** — we cannot ship this to customers.
+
+### Goals
+
+| Feature | Priority | Description |
+|---------|----------|-------------|
+| **FastAPI Backend** | P0 | REST API for all operations |
+| **User Authentication** | P0 | API key based access |
+| **Streamlit Frontend** | P0 | User-specific web interface |
+| **Remove CLI Company List** | P0 | Each user sees ONLY their data |
+
+### Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                     STREAMLIT UI                             │
+│              (User logs in, sees their data)                 │
+└─────────────────────────┬───────────────────────────────────┘
+                          │
+                          ▼
+┌─────────────────────────────────────────────────────────────┐
+│                     FASTAPI BACKEND                          │
+│                                                              │
+│   POST /api/v1/auth/login     → Get API token               │
+│   POST /api/v1/query          → Ask questions               │
+│   POST /api/v1/upload         → Upload Excel/CSV            │
+│   GET  /api/v1/compliance     → Run compliance check        │
+│   GET  /api/v1/data/tables    → List user's tables          │
+└─────────────────────────┬───────────────────────────────────┘
+                          │
+                          ▼
+┌─────────────────────────────────────────────────────────────┐
+│                  USER DATA ISOLATION                         │
+│                                                              │
+│   workspace/{user_id}/                                       │
+│   ├── {company_a}/         # User's company A               │
+│   │   ├── data/                                             │
+│   │   └── company_a.duckdb                                  │
+│   └── {company_b}/         # User's company B               │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### User Authentication Design
+
+```python
+# User model
+class User:
+    user_id: str          # "usr_abc123"
+    email: str            # "user@company.com"
+    api_key_hash: str     # Hashed API key
+    companies: List[str]  # ["company_a", "company_b"]
+    created_at: datetime
+
+# API Key format
+# lm_live_sk_xxxxxxxxxxxxxxxxxxxxx  (production)
+# lm_test_sk_xxxxxxxxxxxxxxxxxxxxx  (testing)
+```
+
+### API Endpoints
+
+```python
+# Authentication
+POST /api/v1/auth/register
+POST /api/v1/auth/login
+POST /api/v1/auth/api-key/generate
+
+# Data Operations
+POST /api/v1/upload                  # Upload Excel/CSV
+GET  /api/v1/data/tables             # List tables
+POST /api/v1/data/query              # Natural language query
+
+# GST Knowledge
+POST /api/v1/knowledge/query         # GST rules Q&A
+
+# Compliance
+GET  /api/v1/compliance/check        # Run audit
+GET  /api/v1/compliance/report       # Get report
+
+# Company Management
+POST /api/v1/companies               # Create company
+GET  /api/v1/companies               # List user's companies
+```
+
+### File Structure (New)
+
+```
+ledgermind/
+├── api/                         # NEW: FastAPI backend
+│   ├── __init__.py
+│   ├── main.py                  # FastAPI app
+│   ├── routes/
+│   │   ├── auth.py              # Authentication routes
+│   │   ├── data.py              # Data query routes
+│   │   ├── knowledge.py         # GST knowledge routes
+│   │   └── compliance.py        # Compliance routes
+│   ├── models/
+│   │   ├── user.py              # User model
+│   │   └── request.py           # Request/response models
+│   └── middleware/
+│       └── auth.py              # API key validation
+│
+├── ui/                          # NEW: Streamlit frontend
+│   ├── app.py                   # Main Streamlit app
+│   ├── pages/
+│   │   ├── login.py
+│   │   ├── dashboard.py
+│   │   ├── upload.py
+│   │   └── query.py
+│   └── components/
+│       └── charts.py
+│
+├── core/
+│   └── user.py                  # NEW: User management
+```
+
+### Implementation Steps
+
+1. **Create FastAPI backend** (`api/`)
+2. **Add user authentication** (`api/middleware/auth.py`)
+3. **Create Streamlit UI** (`ui/`)
+4. **Migrate core logic to API calls**
+5. **Remove CLI company selection** (security fix)
+6. **Add user registration/login flow**
+
+---
+
+## Phase 2: Compliance Engine
 
 ### Goals
 
@@ -173,60 +304,13 @@ Build the actual compliance checking logic that makes LedgerMind valuable.
 | ITC Reconciliation | Match with GSTR-2A/2B | Ensure claimable credits |
 | Compliance Report | Actionable audit summary | One-click audit prep |
 | **Specialized SQL Model** | Use `sqlcoder` for Text-to-SQL | Better query accuracy |
-| **User Authentication** | API key based access | Multi-user security |
 
-### Note on Current Limitations
+### Note on SQL Model
 
-**Text-to-SQL (Phase 1 limitation):**
 Currently using `qwen2.5:7b-instruct` (general-purpose) for SQL generation. 
 Phase 2 will add specialized model selection:
 - `sqlcoder` or `defog/sqlcoder-7b` for SQL generation
 - Keep `qwen2.5:7b-instruct` for knowledge queries
-
-**User Authentication (Phase 1 → Phase 2):**
-
-Current: **Company-based isolation** (local CLI)
-```
-workspace/
-├── company_a/        # Each company has isolated data
-├── company_b/
-```
-
-Phase 2: **User-based API authentication**
-```
-User (API Key) → Multiple Companies → Isolated Data
-     │
-     └── user_id: "usr_abc123"
-         ├── api_key: "lm_live_sk_..."
-         ├── companies: ["company_a", "company_b"]
-         └── permissions: ["read", "write", "admin"]
-```
-
-**Phase 2 API Design:**
-```python
-# API endpoint structure
-POST /api/v1/query
-Headers:
-  Authorization: Bearer lm_live_sk_xxxxx
-  X-Company-ID: company_a  (optional, uses default if not provided)
-
-Body:
-{
-  "query": "Show me November balance",
-  "context": "data"  # or "gst_knowledge"
-}
-```
-
-**User table schema (Phase 2):**
-```sql
-CREATE TABLE users (
-  user_id TEXT PRIMARY KEY,
-  email TEXT UNIQUE,
-  api_key_hash TEXT,
-  created_at TIMESTAMP,
-  companies JSON  -- ["company_a", "company_b"]
-);
-```
 
 ### Technical Milestones
 

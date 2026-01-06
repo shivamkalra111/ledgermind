@@ -147,7 +147,83 @@ DATA_QUERY   → "my total sales"    → Query DuckDB
 
 ---
 
-## 5. File/Module Reference
+## 5. Knowledge Base Setup (One-Time)
+
+Before using LedgerMind, the knowledge base must be populated:
+
+```bash
+python scripts/ingest_knowledge.py
+```
+
+### 5.1 What Gets Ingested (`scripts/ingest_knowledge.py`)
+
+| Source | Type | What it contains |
+|--------|------|------------------|
+| `knowledge/gst/*.pdf` | PDF files | CGST Act, CGST Rules, Notifications |
+| `knowledge/accounting/*.pdf` | PDF files | Accounting standards |
+
+### 5.2 Ingestion Process
+
+```
+1. Load PDF files from knowledge/ folder
+   └── PyPDFLoader reads each PDF
+
+2. Split into chunks
+   └── RecursiveCharacterTextSplitter
+   └── chunk_size=1000, overlap=200
+
+3. Generate embeddings
+   └── HuggingFace BGE model (BAAI/bge-large-en-v1.5)
+   └── Each chunk → 1024-dimension vector
+
+4. Store in ChromaDB
+   └── chroma_db/ folder
+   └── Collection: "gst_knowledge"
+```
+
+### 5.3 ChromaDB Structure
+
+```
+chroma_db/
+├── chroma.sqlite3          # Metadata and mappings
+└── {collection_id}/        # Vector embeddings
+    ├── data_level0.bin     # HNSW index
+    └── length.bin          # Vector lengths
+```
+
+### 5.4 How It's Used (Runtime)
+
+| Function | File | What it does |
+|----------|------|--------------|
+| `KnowledgeBase()` | `core/knowledge.py` | Loads ChromaDB collection |
+| `get_relevant_rules(query)` | `core/knowledge.py` | Searches for similar chunks |
+
+```python
+# Example: User asks "When to file GSTR-3B?"
+query = "When to file GSTR-3B?"
+
+# 1. Convert query to embedding
+# 2. Search ChromaDB for similar chunks
+# 3. Return top 5 relevant chunks from CGST Rules PDF
+# 4. LLM uses these chunks to answer
+```
+
+### 5.5 Reference Data (CSV - NOT in ChromaDB)
+
+These are loaded directly from CSV, not ChromaDB:
+
+| File | Loaded by | Used for |
+|------|-----------|----------|
+| `db/gst/slabs.csv` | `load_gst_slabs()` | Rate slab definitions |
+| `db/gst/goods_hsn.csv` | `load_goods_rates()` | HSN code lookups |
+| `db/gst/services_sac.csv` | `load_services_rates()` | SAC code lookups |
+| `db/gst/blocked_itc.csv` | `load_blocked_credits()` | Section 17(5) items |
+| `db/msme/classification.csv` | `load_msme_classification()` | MSME thresholds |
+| `db/india/state_codes.csv` | `load_state_codes()` | State code validation |
+
+---
+
+## 6. File/Module Reference
 
 ### Core Files
 
@@ -184,9 +260,17 @@ DATA_QUERY   → "my total sales"    → Query DuckDB
 |------|---------|---------------|
 | `llm/client.py` | Ollama integration | `generate()`, `generate_json()` |
 
+### Scripts
+
+| File | Purpose | When to run |
+|------|---------|-------------|
+| `scripts/ingest_knowledge.py` | Load PDFs into ChromaDB | Once, at setup |
+| `scripts/create_sample_data.py` | Generate test Excel/CSV | For testing |
+| `scripts/scrape_gst_rates.py` | Update GST rates from CBIC | When rates change |
+
 ---
 
-## 6. Data Flow Diagram
+## 7. Data Flow Diagram
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -225,7 +309,7 @@ DATA_QUERY   → "my total sales"    → Query DuckDB
 
 ---
 
-## 7. Startup Sequence Summary
+## 8. Startup Sequence Summary
 
 ```
 1. main.py
@@ -249,7 +333,7 @@ DATA_QUERY   → "my total sales"    → Query DuckDB
 
 ---
 
-## 8. Key Design Decisions
+## 9. Key Design Decisions
 
 | Decision | Reason |
 |----------|--------|
@@ -259,10 +343,12 @@ DATA_QUERY   → "my total sales"    → Query DuckDB
 | **Smart file loading** | Only reload changed files (by hash) |
 | **Query classification** | Route to best knowledge source |
 | **Fallback mechanisms** | Show helpful data when queries fail |
+| **CSV for rates** | Easy to update, human-readable |
+| **ChromaDB for legal** | Semantic search on PDF content |
 
 ---
 
-## 9. Adding New Features (Quick Guide)
+## 10. Adding New Features (Quick Guide)
 
 ### Add a new command:
 1. Add pattern in `orchestration/router.py` → `patterns` dict
