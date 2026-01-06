@@ -166,127 +166,201 @@ validate_llm_response_has_citation()  # Sources required
 **Current Problem:** The CLI shows ALL companies to ANY user running it.
 This is a **security flaw** — we cannot ship this to customers.
 
+### Product Model (Like OpenAI API)
+
+- **We provide:** REST API endpoints
+- **Customers use:** Their own apps/scripts to call our API
+- **No customer-facing UI** — API only (like OpenAI, Stripe, Twilio)
+
 ### Goals
 
-| Feature | Priority | Description |
-|---------|----------|-------------|
-| **FastAPI Backend** | P0 | REST API for all operations |
-| **User Authentication** | P0 | API key based access |
-| **Streamlit Frontend** | P0 | User-specific web interface |
-| **Remove CLI Company List** | P0 | Each user sees ONLY their data |
+| Feature | Priority | For Whom | Description |
+|---------|----------|----------|-------------|
+| **FastAPI Backend** | P0 | Customers | REST API (the product) |
+| **API Key Authentication** | P0 | Customers | Secure access per customer |
+| **File Upload Endpoint** | P0 | Customers | Upload Excel/CSV via API |
+| **Query Endpoint** | P0 | Customers | Natural language queries |
+| **Streamlit Admin** | P1 | Us (internal) | Testing & debugging tool |
+| **Remove CLI Company List** | P0 | Security | Fix vulnerability |
 
 ### Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                     STREAMLIT UI                             │
-│              (User logs in, sees their data)                 │
-└─────────────────────────┬───────────────────────────────────┘
-                          │
-                          ▼
-┌─────────────────────────────────────────────────────────────┐
-│                     FASTAPI BACKEND                          │
-│                                                              │
-│   POST /api/v1/auth/login     → Get API token               │
-│   POST /api/v1/query          → Ask questions               │
-│   POST /api/v1/upload         → Upload Excel/CSV            │
-│   GET  /api/v1/compliance     → Run compliance check        │
-│   GET  /api/v1/data/tables    → List user's tables          │
-└─────────────────────────┬───────────────────────────────────┘
-                          │
-                          ▼
-┌─────────────────────────────────────────────────────────────┐
-│                  USER DATA ISOLATION                         │
-│                                                              │
-│   workspace/{user_id}/                                       │
-│   ├── {company_a}/         # User's company A               │
-│   │   ├── data/                                             │
-│   │   └── company_a.duckdb                                  │
-│   └── {company_b}/         # User's company B               │
-└─────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────┐
+│                                                                         │
+│   CUSTOMERS (External)                    US (Internal)                 │
+│                                                                         │
+│   ┌─────────────────┐                    ┌─────────────────┐           │
+│   │  Their App/Code │                    │   Streamlit     │           │
+│   │  (Python, JS,   │                    │   (Testing &    │           │
+│   │   Postman, etc) │                    │    Admin)       │           │
+│   └────────┬────────┘                    └────────┬────────┘           │
+│            │                                      │                     │
+│            │ API Calls                            │ Internal Only       │
+│            ▼                                      ▼                     │
+│   ┌─────────────────────────────────────────────────────────┐         │
+│   │                     FASTAPI BACKEND                      │         │
+│   │                    (THE PRODUCT)                         │         │
+│   │                                                          │         │
+│   │   POST /api/v1/upload      → Upload Excel/CSV           │         │
+│   │   POST /api/v1/query       → Natural language query     │         │
+│   │   GET  /api/v1/compliance  → Run compliance check       │         │
+│   │   GET  /api/v1/data/tables → List customer's tables     │         │
+│   └─────────────────────────────────────────────────────────┘         │
+│                              │                                          │
+│                              ▼                                          │
+│   ┌─────────────────────────────────────────────────────────┐         │
+│   │                  CUSTOMER DATA ISOLATION                 │         │
+│   │                                                          │         │
+│   │   workspace/{customer_api_key}/                          │         │
+│   │   ├── data/              # Their uploaded files          │         │
+│   │   ├── customer.duckdb    # Their database                │         │
+│   │   └── data_state.json    # File tracking                 │         │
+│   └─────────────────────────────────────────────────────────┘         │
+│                                                                         │
+└─────────────────────────────────────────────────────────────────────────┘
 ```
 
-### User Authentication Design
+### Customer Authentication
 
 ```python
-# User model
-class User:
-    user_id: str          # "usr_abc123"
-    email: str            # "user@company.com"
-    api_key_hash: str     # Hashed API key
-    companies: List[str]  # ["company_a", "company_b"]
-    created_at: datetime
-
-# API Key format
+# API Key format (like OpenAI, Stripe)
 # lm_live_sk_xxxxxxxxxxxxxxxxxxxxx  (production)
 # lm_test_sk_xxxxxxxxxxxxxxxxxxxxx  (testing)
+
+# Customer model
+class Customer:
+    customer_id: str      # "cust_abc123"
+    email: str            # "user@company.com"
+    api_key_hash: str     # Hashed API key
+    created_at: datetime
+    data_path: Path       # workspace/{customer_id}/
 ```
 
-### API Endpoints
+### API Endpoints (The Product)
 
 ```python
-# Authentication
-POST /api/v1/auth/register
-POST /api/v1/auth/login
-POST /api/v1/auth/api-key/generate
+# All endpoints require: Authorization: Bearer lm_live_sk_xxxxx
 
 # Data Operations
-POST /api/v1/upload                  # Upload Excel/CSV
-GET  /api/v1/data/tables             # List tables
+POST /api/v1/upload                  # Upload Excel/CSV file
+GET  /api/v1/data/tables             # List customer's tables
 POST /api/v1/data/query              # Natural language query
 
-# GST Knowledge
+# GST Knowledge (shared, read-only)
 POST /api/v1/knowledge/query         # GST rules Q&A
 
 # Compliance
-GET  /api/v1/compliance/check        # Run audit
-GET  /api/v1/compliance/report       # Get report
+GET  /api/v1/compliance/check        # Run audit on customer's data
+GET  /api/v1/compliance/report       # Get detailed report
+```
 
-# Company Management
-POST /api/v1/companies               # Create company
-GET  /api/v1/companies               # List user's companies
+### How Customers Use Our API
+
+```python
+# Customer's Python code
+import requests
+
+API_KEY = "lm_live_sk_xxxxx"  # Their unique key
+BASE_URL = "https://api.ledgermind.com"  # or localhost:8000
+
+# 1. Upload their Excel file
+with open("sales_register.xlsx", "rb") as f:
+    response = requests.post(
+        f"{BASE_URL}/api/v1/upload",
+        headers={"Authorization": f"Bearer {API_KEY}"},
+        files={"file": f}
+    )
+print(response.json())  # {"status": "success", "table": "sales_register_2025"}
+
+# 2. Query their data (natural language)
+response = requests.post(
+    f"{BASE_URL}/api/v1/data/query",
+    headers={"Authorization": f"Bearer {API_KEY}"},
+    json={"query": "What is my total sales for November?"}
+)
+print(response.json())  # {"answer": "Your total sales for November: ₹12,45,000"}
+
+# 3. Ask about GST rules
+response = requests.post(
+    f"{BASE_URL}/api/v1/knowledge/query",
+    headers={"Authorization": f"Bearer {API_KEY}"},
+    json={"query": "When should I file GSTR-3B?"}
+)
+print(response.json())  # {"answer": "GSTR-3B due date is 20th of next month..."}
+
+# 4. Run compliance check
+response = requests.get(
+    f"{BASE_URL}/api/v1/compliance/check",
+    headers={"Authorization": f"Bearer {API_KEY}"}
+)
+print(response.json())  # {"issues": [...], "summary": "2 warnings found"}
+```
+
+### Streamlit Admin (Internal Tool - NOT for Customers)
+
+```
+Purpose: For us (developers) to test and debug
+- Test API endpoints manually
+- View customer data for support
+- Monitor system health
+- Debug issues
+- NOT exposed to customers
 ```
 
 ### File Structure (New)
 
 ```
 ledgermind/
-├── api/                         # NEW: FastAPI backend
+├── api/                         # NEW: FastAPI backend (THE PRODUCT)
 │   ├── __init__.py
-│   ├── main.py                  # FastAPI app
+│   ├── main.py                  # FastAPI app entry point
 │   ├── routes/
-│   │   ├── auth.py              # Authentication routes
-│   │   ├── data.py              # Data query routes
-│   │   ├── knowledge.py         # GST knowledge routes
-│   │   └── compliance.py        # Compliance routes
+│   │   ├── upload.py            # POST /api/v1/upload
+│   │   ├── data.py              # POST /api/v1/data/query
+│   │   ├── knowledge.py         # POST /api/v1/knowledge/query
+│   │   └── compliance.py        # GET /api/v1/compliance/check
 │   ├── models/
-│   │   ├── user.py              # User model
-│   │   └── request.py           # Request/response models
+│   │   ├── customer.py          # Customer model
+│   │   └── schemas.py           # Request/response schemas
 │   └── middleware/
 │       └── auth.py              # API key validation
 │
-├── ui/                          # NEW: Streamlit frontend
-│   ├── app.py                   # Main Streamlit app
-│   ├── pages/
-│   │   ├── login.py
-│   │   ├── dashboard.py
-│   │   ├── upload.py
-│   │   └── query.py
-│   └── components/
-│       └── charts.py
+├── admin/                       # NEW: Internal tools (NOT for customers)
+│   ├── streamlit_app.py         # Admin UI for testing/debugging
+│   └── scripts/
+│       ├── create_api_key.py    # Generate customer API keys
+│       └── view_customer.py     # Debug customer data
 │
 ├── core/
-│   └── user.py                  # NEW: User management
+│   └── api_keys.py              # NEW: API key management
 ```
 
 ### Implementation Steps
 
-1. **Create FastAPI backend** (`api/`)
-2. **Add user authentication** (`api/middleware/auth.py`)
-3. **Create Streamlit UI** (`ui/`)
-4. **Migrate core logic to API calls**
-5. **Remove CLI company selection** (security fix)
-6. **Add user registration/login flow**
+1. **Create FastAPI backend** (`api/main.py`)
+2. **Add API key authentication** (`api/middleware/auth.py`)
+3. **Create upload endpoint** (`api/routes/upload.py`)
+4. **Create query endpoint** (`api/routes/data.py`)
+5. **Create internal admin tool** (`admin/streamlit_app.py`)
+6. **Remove CLI company selection** (security fix)
+7. **Create API key generation script** (`admin/scripts/create_api_key.py`)
+
+### Future: Google Sheets Integration (Phase 2+)
+
+```
+Customer's Google Sheet
+        │
+        │ Webhook on change
+        ▼
+┌─────────────────┐
+│ POST /api/v1/   │
+│ sync/sheets     │
+└────────┬────────┘
+         │
+         ▼
+Auto-refresh customer's DuckDB
+```
 
 ---
 

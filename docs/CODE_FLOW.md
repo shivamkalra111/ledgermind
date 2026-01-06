@@ -337,6 +337,9 @@ These are loaded directly from CSV, not ChromaDB:
 
 | Decision | Reason |
 |----------|--------|
+| **API-only product** | Like OpenAI — customers call API from their apps |
+| **No customer UI** | We provide API, they build their UI |
+| **Streamlit = internal** | For our testing/debugging only |
 | **DuckDB per customer** | Data isolation, no cross-contamination |
 | **Shared ChromaDB** | GST rules same for everyone, save memory |
 | **Shared LLM** | Single Ollama instance, efficient |

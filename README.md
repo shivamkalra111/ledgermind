@@ -142,13 +142,13 @@ Think of LedgerMind as having **3 AI employees** working for you:
 ledgermind/
 │
 ├── 🌐 api/                        # NEW: FastAPI backend (Phase 1B)
-│   ├── main.py                    # FastAPI app entry
-│   ├── routes/                    # API endpoints
-│   └── middleware/                # Auth middleware
+│   ├── main.py                    # FastAPI app entry (THE PRODUCT)
+│   ├── routes/                    # API endpoints for customers
+│   └── middleware/                # API key authentication
 │
-├── 🖥️ ui/                         # NEW: Streamlit frontend (Phase 1B)
-│   ├── app.py                     # Streamlit app entry
-│   └── pages/                     # Login, dashboard, upload
+├── 🔧 admin/                      # NEW: Internal tools (Phase 1B)
+│   ├── streamlit_app.py           # Admin UI for testing (NOT for customers)
+│   └── scripts/                   # API key generation, debugging
 │
 ├── 🤖 agents/                     # The 3 AI workers
 │   ├── discovery.py               # Reads and organizes your files
@@ -266,37 +266,49 @@ LedgerMind is designed to be **safe and reliable**:
 | **SQL Generation** | Uses general-purpose LLM for SQL | Phase 2: `sqlcoder` model |
 | **CLI Only** | No web interface | Phase 1B: Streamlit UI |
 
-### 🚀 Next: Phase 1B — API + Streamlit (Immediate)
+### 🚀 Next: Phase 1B — API Backend (Immediate)
 
 **Why?** The current CLI shows ALL companies to any user — **security risk**.
 
-| Feature | Priority | Description |
-|---------|----------|-------------|
-| **FastAPI Backend** | P0 | REST API for all operations |
-| **User Authentication** | P0 | API key based, user-specific data |
-| **Streamlit Frontend** | P0 | Web UI with login |
-| **Remove CLI Selection** | P0 | Fix security vulnerability |
+**Product Model:** API-only (like OpenAI, Stripe) — no customer-facing UI.
+
+| Feature | Priority | For Whom | Description |
+|---------|----------|----------|-------------|
+| **FastAPI Backend** | P0 | Customers | REST API (the product) |
+| **API Key Auth** | P0 | Customers | Secure per-customer access |
+| **Upload Endpoint** | P0 | Customers | Upload Excel/CSV via API |
+| **Streamlit Admin** | P1 | Us | Internal testing tool |
 
 ```
-┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-│  Streamlit  │ ──▶ │   FastAPI   │ ──▶ │  User Data  │
-│     UI      │     │   Backend   │     │  (Isolated) │
-└─────────────┘     └─────────────┘     └─────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│  CUSTOMERS                           US (Internal)          │
+│  ┌──────────────┐                   ┌──────────────┐       │
+│  │ Their App/   │                   │  Streamlit   │       │
+│  │ Python/JS    │                   │  Admin Tool  │       │
+│  └──────┬───────┘                   └──────┬───────┘       │
+│         │ API calls                        │ Testing       │
+│         ▼                                  ▼               │
+│  ┌─────────────────────────────────────────────────┐       │
+│  │              FASTAPI (The Product)              │       │
+│  │  POST /upload  POST /query  GET /compliance     │       │
+│  └─────────────────────────────────────────────────┘       │
+└─────────────────────────────────────────────────────────────┘
 ```
 
 ### Coming Soon 🚧
 
-| Feature | Phase | Description |
-|---------|-------|-------------|
-| **FastAPI + Streamlit** | Phase 1B | Web app with auth |
-| **User Registration** | Phase 1B | Sign up / login |
-| **API Key Access** | Phase 1B | Secure programmatic access |
-| **Specialized SQL Model** | Phase 2 | Use `sqlcoder` for better query accuracy |
-| **ITC Reconciliation** | Phase 2 | Match your purchases with GSTR-2B |
-| **43B(h) Alerts** | Phase 2 | Warn before MSME payment deadlines |
-| **Vendor Scoring** | Phase 3 | Rate vendors by reliability |
-| **Cash Flow Forecast** | Phase 3 | Predict next 3 months |
-| **PDF Reports** | Phase 3 | Export audit reports |
+| Feature | Phase | For Whom | Description |
+|---------|-------|----------|-------------|
+| **FastAPI Backend** | Phase 1B | Customers | REST API (the product) |
+| **API Key Auth** | Phase 1B | Customers | Per-customer authentication |
+| **Upload/Query Endpoints** | Phase 1B | Customers | Core functionality via API |
+| **Streamlit Admin** | Phase 1B | Us | Internal testing/debugging |
+| **Google Sheets Sync** | Phase 2 | Customers | Auto-sync from spreadsheets |
+| **Specialized SQL Model** | Phase 2 | Customers | Better query accuracy |
+| **ITC Reconciliation** | Phase 2 | Customers | Match with GSTR-2B |
+| **43B(h) Alerts** | Phase 2 | Customers | MSME payment warnings |
+| **Vendor Scoring** | Phase 3 | Customers | Reliability rankings |
+| **PDF Reports** | Phase 3 | Customers | Export audit reports |
 
 ---
 
@@ -360,17 +372,19 @@ pytest tests/test_guardrails.py -v
          ▼                      ▼                       ▼
 ┌─────────────────┐   ┌─────────────────┐   ┌─────────────────┐   ┌───────────────┐
 │   PHASE 1       │   │   PHASE 1B      │   │   PHASE 2       │   │  PHASE 3      │
-│   FOUNDATION    │   │   API + UI      │   │   COMPLIANCE    │   │  INTELLIGENCE │
+│   FOUNDATION    │   │   API BACKEND   │   │   COMPLIANCE    │   │  INTELLIGENCE │
 │   ✅ COMPLETE   │   │   ◀── NEXT      │   │                 │   │               │
 │                 │   │                 │   │                 │   │               │
-│ ✅ Read files   │   │ • FastAPI       │   │ • SQL model     │   │ • Vendor      │
-│ ✅ GST Q&A      │   │ • Streamlit UI  │   │   (sqlcoder)    │   │   scores      │
-│ ✅ Tax rates    │   │ • User auth     │   │ • Tax verify    │   │ • Cash flow   │
-│ ✅ Knowledge    │   │ • API keys      │   │ • 43B(h) alerts │   │   forecast    │
-│ ✅ Guardrails   │   │ • Login/signup  │   │ • ITC matching  │   │ • PDF exports │
-│ ✅ Tests (166)  │   │ • Fix CLI       │   │ • Audit reports │   │               │
-│ ✅ Data isolate │   │   security      │   │                 │   │               │
+│ ✅ Read files   │   │ • FastAPI       │   │ • Google Sheets │   │ • Vendor      │
+│ ✅ GST Q&A      │   │   (product)     │   │   sync          │   │   scores      │
+│ ✅ Tax rates    │   │ • API keys      │   │ • SQL model     │   │ • Cash flow   │
+│ ✅ Knowledge    │   │ • Upload API    │   │   (sqlcoder)    │   │   forecast    │
+│ ✅ Guardrails   │   │ • Query API     │   │ • Tax verify    │   │ • PDF exports │
+│ ✅ Tests (166)  │   │ • Streamlit     │   │ • 43B(h) alerts │   │               │
+│ ✅ Data isolate │   │   (internal)    │   │ • ITC matching  │   │               │
 └─────────────────┘   └─────────────────┘   └─────────────────┘   └───────────────┘
+
+Product Model: API-only (like OpenAI) — customers call our API from their apps
 ```
 
 ---
@@ -409,13 +423,19 @@ LedgerMind knows about:
 > Yes! LedgerMind automatically creates separate workspaces for each company. Just run `python main.py` and select "new" to create a new company. Each company has its own database and data folder.
 
 **Q: Is there an API I can use?**
-> Coming in Phase 1B (immediate next). FastAPI backend + Streamlit UI with proper user authentication.
+> Coming in Phase 1B (immediate next). FastAPI backend with API key authentication. You'll call our endpoints from your own code — no UI needed (like OpenAI API).
+
+**Q: Will there be a web dashboard?**
+> No customer-facing UI planned. We provide API only. Streamlit is internal for our testing/debugging. You build your own UI or use our API directly.
 
 **Q: What if my queries don't work well?**
 > Phase 1 uses a general-purpose LLM. Try rephrasing your question, or ask "show my data" to see available tables. Phase 2 will use a specialized SQL model for better accuracy.
 
 **Q: Is the current CLI secure for production?**
-> No. The CLI shows all companies which is a security risk. Phase 1B adds proper user authentication so each user sees only their data.
+> No. The CLI shows all companies which is a security risk. Phase 1B adds API key authentication so each customer sees only their data.
+
+**Q: Can I sync from Google Sheets?**
+> Coming in Phase 2. Your Google Sheet will auto-sync to our API via webhooks.
 
 ---
 
