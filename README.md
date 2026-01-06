@@ -4,7 +4,7 @@
 
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Tests: 144 Passing](https://img.shields.io/badge/tests-144%20passing-brightgreen.svg)]()
+[![Tests: 166 Passing](https://img.shields.io/badge/tests-166%20passing-brightgreen.svg)]()
 [![Status: Phase 1](https://img.shields.io/badge/status-Phase%201%20Complete-success.svg)]()
 
 ---
@@ -32,6 +32,39 @@
 ---
 
 ## 🧠 How It Works (Simple Explanation)
+
+### 📂 Smart Data Understanding
+
+**Your data is unique** — every company names their columns differently:
+
+| Your Column Name | Another Company | What LedgerMind Understands |
+|-----------------|-----------------|----------------------------|
+| "Inv No" | "Invoice Number" | `invoice_number` |
+| "Customer Name" | "Party Name" | `party_name` |
+| "GST Amt" | "Tax Amount" | `tax_amount` |
+
+**The Discovery Agent** uses AI to:
+1. Read your Excel/CSV files (any format)
+2. Understand what each column means
+3. Map it to a standard format
+4. Store in a fast database (DuckDB)
+
+This happens **automatically** — no configuration needed!
+
+### 🔄 Smart Data Loading
+
+LedgerMind automatically detects when your files change:
+
+```
+📂 You add/update files → 🔍 System detects → 📥 Auto-reload → ✅ Ready
+```
+
+- **New files**: Automatically loaded
+- **Modified files**: Automatically refreshed
+- **Deleted files**: Tables removed
+- **No changes**: Instant startup (no re-loading)
+
+---
 
 Think of LedgerMind as having **3 AI employees** working for you:
 
@@ -115,6 +148,7 @@ ledgermind/
 │
 ├── ⚙️ core/                        # The engine room
 │   ├── customer.py                # 🔐 Customer isolation & multi-tenancy
+│   ├── data_state.py              # 🔄 Smart file change detection
 │   ├── data_engine.py             # Turns Excel into searchable database
 │   ├── knowledge.py               # Stores GST rules for quick lookup
 │   ├── reference_data.py          # Loads tax rates from CSV files
@@ -151,23 +185,26 @@ ledgermind/
 │   ├── {company_id}/              # Each company has its own folder
 │   │   ├── data/                  # Excel/CSV files
 │   │   ├── {company_id}.duckdb    # Company's database (isolated)
+│   │   ├── data_state.json        # 🔄 Tracks file changes
 │   │   └── profile.json           # Company metadata
 │   └── sample_company/            # Example files to try
 │
-├── 🧪 tests/                      # Test suite (144 tests)
+├── 🧪 tests/                      # Test suite (166 tests)
 │   ├── conftest.py                # Shared test fixtures
 │   ├── test_config.py             # Configuration tests
 │   ├── test_reference_data.py     # Data loading tests
 │   ├── test_guardrails.py         # Validation tests
 │   ├── test_query_classifier.py   # Query routing tests
 │   ├── test_customer.py           # 🔐 Customer isolation tests
+│   ├── test_data_state.py         # 🔄 Smart loading tests
 │   ├── test_agents.py             # Agent tests
 │   ├── test_orchestration.py      # Workflow tests
 │   └── test_integration.py        # End-to-end tests
 │
 ├── 📖 docs/                       # Detailed documentation
 │   ├── ARCHITECTURE.md            # Technical deep-dive
-│   └── ROADMAP.md                 # Development plan
+│   ├── ROADMAP.md                 # Development plan
+│   └── CODE_FLOW.md               # Step-by-step code walkthrough
 │
 ├── 🔧 scripts/                    # Helper tools
 │   ├── create_sample_data.py      # Generate test data
@@ -208,18 +245,30 @@ LedgerMind is designed to be **safe and reliable**:
 | **GSTIN Validation** | ✅ Ready | Verify tax IDs |
 | **Knowledge Base** | ✅ Ready | 1,276 GST rule chunks |
 | **Query Classifier** | ✅ Ready | Routes questions to correct source |
-| **Test Suite** | ✅ Ready | 144 tests passing |
+| **Test Suite** | ✅ Ready | 166 tests passing |
 | **Customer Isolation** | ✅ Ready | Each company's data separated |
+| **Smart Data Loading** | ✅ Ready | Auto-detects file changes |
+
+### ⚠️ Phase 1 Limitations
+
+| Limitation | Description | Planned For |
+|------------|-------------|-------------|
+| **SQL Generation** | Uses general-purpose LLM (`qwen2.5`) for Text-to-SQL. Works but could be more accurate. | Phase 2: Use `sqlcoder` model |
+| **Authentication** | Company-based isolation (local CLI). No API keys or user accounts. | Phase 2: User-based API auth |
+| **Complex Queries** | Some natural language queries may need rephrasing. | Phase 2: Specialized SQL model |
 
 ### Coming Soon 🚧
 
 | Feature | Phase | Description |
 |---------|-------|-------------|
+| **Specialized SQL Model** | Phase 2 | Use `sqlcoder` for better query accuracy |
+| **User Authentication** | Phase 2 | API key based access for multi-user security |
 | **ITC Reconciliation** | Phase 2 | Match your purchases with GSTR-2B |
 | **43B(h) Alerts** | Phase 2 | Warn before MSME payment deadlines |
 | **Vendor Scoring** | Phase 3 | Rate vendors by reliability |
 | **Cash Flow Forecast** | Phase 3 | Predict next 3 months |
 | **Web Interface** | Phase 4 | Beautiful dashboard |
+| **REST API** | Phase 4 | Access via HTTP endpoints |
 | **PDF Reports** | Phase 4 | Export audit reports |
 
 ---
@@ -267,7 +316,7 @@ You> What is CGST?
 ### Step 5: Run Tests
 
 ```bash
-# Run all 121 tests
+# Run all tests
 pytest tests/ -v
 
 # Run specific test file
@@ -287,12 +336,14 @@ pytest tests/test_guardrails.py -v
 │   FOUNDATION    │   │   COMPLIANCE    │   │   INTELLIGENCE  │
 │   ✅ COMPLETE   │   │   ◀── NEXT      │   │                 │
 │                 │   │                 │   │                 │
-│ ✅ Read files   │   │ • Tax rate      │   │ • Vendor scores │
-│ ✅ GST Q&A      │   │   verification  │   │ • Cash forecast │
-│ ✅ Tax rates    │   │ • 43B(h) alerts │   │ • Web dashboard │
-│ ✅ Knowledge    │   │ • ITC matching  │   │ • PDF exports   │
-│ ✅ Guardrails   │   │ • HSN verify    │   │ • REST API      │
-│ ✅ Tests (121)  │   │ • Audit reports │   │                 │
+│ ✅ Read files   │   │ • SQL model     │   │ • Vendor scores │
+│ ✅ GST Q&A      │   │   (sqlcoder)    │   │ • Cash forecast │
+│ ✅ Tax rates    │   │ • User auth     │   │ • Web dashboard │
+│ ✅ Knowledge    │   │   (API keys)    │   │ • PDF exports   │
+│ ✅ Guardrails   │   │ • Tax verify    │   │ • REST API      │
+│ ✅ Tests (166)  │   │ • 43B(h) alerts │   │                 │
+│ ✅ Customer     │   │ • ITC matching  │   │                 │
+│   isolation     │   │ • Audit reports │   │                 │
 └─────────────────┘   └─────────────────┘   └─────────────────┘
 ```
 
@@ -330,6 +381,12 @@ LedgerMind knows about:
 
 **Q: Can I use it for multiple companies?**
 > Yes! LedgerMind automatically creates separate workspaces for each company. Just run `python main.py` and select "new" to create a new company. Each company has its own database and data folder.
+
+**Q: Is there an API I can use?**
+> Not yet. Phase 1 is CLI-only. Phase 2 will add REST API with API key authentication for secure multi-user access.
+
+**Q: What if my queries don't work well?**
+> Phase 1 uses a general-purpose LLM. Try rephrasing your question, or ask "show my data" to see available tables. Phase 2 will use a specialized SQL model for better accuracy.
 
 ---
 

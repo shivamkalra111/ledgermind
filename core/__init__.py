@@ -21,6 +21,14 @@ from .customer import (
     set_active_customer,
     require_active_customer,
 )
+from .data_state import (
+    DataStateManager,
+    DataState,
+    FileState,
+    FileChange,
+    FileChangeType,
+    get_data_state_manager,
+)
 from .data_engine import DataEngine
 from .schema import StandardInvoice, StandardBankTransaction, VendorMaster, SheetType
 from .mapper import HeaderMapper
@@ -48,6 +56,13 @@ __all__ = [
     "get_active_customer",
     "set_active_customer",
     "require_active_customer",
+    # Data State (Smart Loading)
+    "DataStateManager",
+    "DataState",
+    "FileState",
+    "FileChange",
+    "FileChangeType",
+    "get_data_state_manager",
     # Data
     "DataEngine", 
     "StandardInvoice", 

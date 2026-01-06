@@ -43,7 +43,7 @@ class TestDefinitionWorkflow:
 class TestRateLookupWorkflow:
     """Test complete rate lookup workflow."""
     
-    def test_milk_rate_lookup(self, workflow):
+    def test_milk_rate_lookup(self, workflow, skip_without_llm):
         """Test GST rate lookup for milk (0%)."""
         result = workflow.run("What is the GST rate on milk?")
         
@@ -54,7 +54,7 @@ class TestRateLookupWorkflow:
         response_lower = response.lower()
         assert any(term in response_lower for term in ['0%', 'exempt', 'nil', 'zero'])
     
-    def test_laptop_rate_lookup(self, workflow):
+    def test_laptop_rate_lookup(self, workflow, skip_without_llm):
         """Test GST rate lookup for laptops (18%)."""
         result = workflow.run("GST rate on laptops")
         
@@ -65,7 +65,7 @@ class TestRateLookupWorkflow:
 class TestKnowledgeWorkflow:
     """Test knowledge-based question workflow."""
     
-    def test_filing_deadline_question(self, workflow):
+    def test_filing_deadline_question(self, workflow, skip_without_llm):
         """Test GSTR-3B filing deadline question."""
         result = workflow.run("What is the due date for GSTR-3B?")
         
@@ -171,7 +171,7 @@ class TestDataPipeline:
 class TestComplexQueries:
     """Test handling of complex multi-part questions."""
     
-    def test_multi_part_question(self, workflow):
+    def test_multi_part_question(self, workflow, skip_without_llm):
         """Test that complex questions don't return None."""
         result = workflow.run(
             "What is CGST and what will be the tax rate of a cigarette? "
@@ -183,7 +183,7 @@ class TestComplexQueries:
         assert isinstance(result, str)
         assert len(result) > 50  # Should have substantial answer
     
-    def test_rate_not_in_csv(self, workflow):
+    def test_rate_not_in_csv(self, workflow, skip_without_llm):
         """Test rate lookup for item not in our CSV database."""
         result = workflow.run("What is the GST rate on gold jewelry?")
         

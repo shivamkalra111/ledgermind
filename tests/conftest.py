@@ -75,9 +75,10 @@ def knowledge_base():
 
 @pytest.fixture(scope="module")
 def workflow():
-    """Return AgentWorkflow instance."""
+    """Return AgentWorkflow instance (no customer - legacy mode)."""
     from orchestration.workflow import AgentWorkflow
-    return AgentWorkflow()
+    # auto_load=False because we're in legacy mode without customer
+    return AgentWorkflow(customer=None, auto_load=False)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

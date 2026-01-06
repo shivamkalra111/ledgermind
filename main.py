@@ -262,7 +262,27 @@ def main():
     
     try:
         with customer:
-            workflow = AgentWorkflow(customer=customer)
+            # Initialize with auto-load disabled (we'll show progress)
+            workflow = AgentWorkflow(customer=customer, auto_load=False)
+            
+            # Check for data changes (verify state matches actual DuckDB tables)
+            data_state = customer.get_data_state_manager()
+            existing_tables = workflow.data_engine.list_tables()
+            summary = data_state.get_summary(existing_tables=existing_tables)
+            
+            if summary["total_files"] > 0:
+                if summary["needs_reload"]:
+                    console.print(f"📂 Detected {summary['new_files']} new, {summary['modified_files']} modified files", style="yellow")
+                    with console.status("[bold green]Loading data...[/bold green]"):
+                        # Now run auto-load
+                        workflow._smart_load_data()
+                    console.print(f"✅ Loaded {len(workflow.data_engine.list_tables())} tables", style="green")
+                else:
+                    console.print(f"✅ {summary['loaded_files']} files already loaded (no changes)", style="green")
+                    workflow._data_loaded = True
+            else:
+                console.print("📭 No data files yet. Place Excel/CSV in your data folder.", style="dim")
+            
             console.print("✅ System ready!\n", style="green")
             
             # Show customer info

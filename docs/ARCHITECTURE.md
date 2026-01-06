@@ -4,7 +4,7 @@
 
 **Last Updated:** January 2026  
 **Phase:** 1 (Foundation) ✅ Complete  
-**Tests:** 144 Passing
+**Tests:** 166 Passing
 
 ---
 
@@ -21,6 +21,7 @@ LedgerMind is an **autonomous financial intelligence platform** built on a multi
 5. **Proper Knowledge Routing** — Each knowledge layer serves its purpose
 6. **Clean Separation** — Config for settings, reference_data for loading
 7. **Customer Isolation** — Each customer's data is completely isolated
+8. **Smart Data Loading** — Auto-detect file changes, only reload what's needed
 
 ---
 
@@ -256,6 +257,7 @@ ledgermind/
 | File | Purpose | Why It Exists |
 |------|---------|---------------|
 | `customer.py` | **Customer isolation** | **Multi-tenant data separation** |
+| `data_state.py` | **Smart file change detection** | **Only reload changed files** |
 | `data_engine.py` | DuckDB wrapper - Excel as SQL | Fast analytics on user's financial data |
 | `knowledge.py` | ChromaDB wrapper - RAG for rules | Legal questions need document search |
 | `reference_data.py` | Load CSV data, rate lookups | **Clean separation from config** |
@@ -292,13 +294,14 @@ ledgermind/
 | `test_reference_data.py` | 19 | CSV loading, rate lookups |
 | `test_guardrails.py` | 17 | GSTIN, HSN, tax validation |
 | `test_query_classifier.py` | 20 | Query routing accuracy |
-| `test_customer.py` | **23** | **Customer isolation** |
+| `test_customer.py` | 23 | Customer isolation |
+| `test_data_state.py` | **22** | **Smart file loading** |
 | `test_data_engine.py` | 8 | DuckDB operations |
 | `test_knowledge.py` | 7 | ChromaDB search |
 | `test_agents.py` | 10 | Agent initialization |
 | `test_orchestration.py` | 10 | Router, workflow |
 | `test_integration.py` | 20 | End-to-end flows |
-| **Total** | **144** | |
+| **Total** | **166** | |
 
 ---
 
@@ -336,7 +339,149 @@ ledgermind/
 
 ---
 
-## 8. Customer Isolation Architecture
+## 8. Dynamic Data Discovery
+
+### How Discovery Works
+
+**Every company's data is different.** Column names, file formats, and structures vary:
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                      DYNAMIC DISCOVERY PROCESS                               │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  COMPANY A's Excel:                 COMPANY B's Excel:                      │
+│  ┌─────────────────┐                ┌─────────────────┐                     │
+│  │ Inv No  │ Amt   │                │ Invoice Number  │ Total │             │
+│  │ C001    │ 1000  │                │ INV-2025-001    │ 5000  │             │
+│  └─────────────────┘                └─────────────────┘                     │
+│                                                                             │
+│                         │                     │                             │
+│                         ▼                     ▼                             │
+│                                                                             │
+│           ┌─────────────────────────────────────────┐                       │
+│           │        DISCOVERY AGENT (LLM)            │                       │
+│           │                                         │                       │
+│           │  "This looks like an invoice..."        │                       │
+│           │  "Inv No" → invoice_number              │                       │
+│           │  "Amt" → total_value                    │                       │
+│           │  "Invoice Number" → invoice_number      │                       │
+│           │  "Total" → total_value                  │                       │
+│           └─────────────────────────────────────────┘                       │
+│                                                                             │
+│                         │                     │                             │
+│                         ▼                     ▼                             │
+│                                                                             │
+│           ┌─────────────────────────────────────────┐                       │
+│           │       STANDARD DATA MODEL (SDM)         │                       │
+│           │  invoice_number │ total_value │ ...     │                       │
+│           │  C001           │ 1000        │         │                       │
+│           │  INV-2025-001   │ 5000        │         │                       │
+│           └─────────────────────────────────────────┘                       │
+│                                                                             │
+│  discovery_meta.json:                                                       │
+│  - Generated PER COMPANY based on THEIR file structure                      │
+│  - NOT a static template                                                    │
+│  - LLM analyzes headers and creates mappings dynamically                    │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Why `discovery_meta.json` is Dynamic
+
+This file is **generated by the system**, NOT provided by customers:
+
+| Aspect | Description |
+|--------|-------------|
+| **When Created** | When user runs "analyze data" |
+| **What It Contains** | Mapping of customer's column names to SDM |
+| **Unique Per Customer** | Each company gets their own mappings |
+| **LLM-Powered** | AI understands arbitrary column names |
+
+```json
+// Company A's discovery_meta.json
+{
+  "sales.xlsx": {
+    "sheet_type": "sales_register",
+    "header_mapping": {
+      "Inv No": "invoice_number",      // Their naming
+      "Amt": "total_value"
+    }
+  }
+}
+
+// Company B's discovery_meta.json (completely different!)
+{
+  "invoices.csv": {
+    "sheet_type": "sales_register",
+    "header_mapping": {
+      "Invoice Number": "invoice_number",  // Their naming
+      "Grand Total": "total_value"
+    }
+  }
+}
+```
+
+---
+
+## 9. Smart Data Loading
+
+### Auto-Detection System
+
+LedgerMind uses **hash-based change detection** to minimize reload time:
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                      SMART DATA LOADING                                      │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  On Startup:                                                                │
+│                                                                             │
+│  1. Read data_state.json (file hashes from last session)                    │
+│  2. Scan data/ folder for current files                                     │
+│  3. Compare:                                                                │
+│     - NEW files (hash not in state) → Load                                  │
+│     - MODIFIED files (hash changed) → Reload                                │
+│     - DELETED files (in state, not in folder) → Remove table                │
+│     - UNCHANGED files (hash matches) → Skip (instant!)                      │
+│  4. Update data_state.json                                                  │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### State File Structure
+
+```json
+// workspace/{customer}/data_state.json
+{
+  "customer_id": "acme_corp",
+  "last_scan": "2026-01-06T10:30:00",
+  "files": {
+    "sales_2025.xlsx": {
+      "filename": "sales_2025.xlsx",
+      "file_hash": "a1b2c3d4...",  // MD5 hash of contents
+      "file_size": 102400,
+      "modified_time": "2026-01-06T09:00:00",
+      "last_loaded": "2026-01-06T09:05:00",
+      "table_name": "sales_2025",
+      "row_count": 500
+    }
+  }
+}
+```
+
+### Benefits
+
+| Benefit | Description |
+|---------|-------------|
+| **Fast Startup** | Only reload changed files |
+| **No Manual Refresh** | System auto-detects changes |
+| **Data Integrity** | Hash-based, not timestamp-based |
+| **Audit Trail** | Know when each file was last loaded |
+
+---
+
+## 10. Customer Isolation Architecture
 
 ### Multi-Tenant Design
 
@@ -388,7 +533,7 @@ workflow.run("What are my total sales?")  # Only queries customer's data
 
 ---
 
-## 9. Clean Code Principles
+## 11. Clean Code Principles
 
 ### Config vs Reference Data
 
@@ -428,7 +573,7 @@ For GST rates: Use the rate data provided in context (from our database).
 
 ---
 
-## 10. Test Commands
+## 12. Test Commands
 
 ```bash
 # Run all tests
@@ -451,7 +596,7 @@ print(c.classify('GST rate on milk?'))  # → rate_lookup, csv
 
 ---
 
-## 11. Current Status
+## 13. Current Status
 
 ### Phase 1 Complete ✅
 
@@ -465,7 +610,8 @@ print(c.classify('GST rate on milk?'))  # → rate_lookup, csv
 | LLM Client | ✅ | Ollama connected |
 | Reference Data | ✅ | 6 CSV files |
 | **Customer Isolation** | ✅ | **Multi-tenant ready** |
-| Tests | ✅ | **144 passing** |
+| **Smart Data Loading** | ✅ | **Auto-detect changes** |
+| Tests | ✅ | **166 passing** |
 
 ---
 

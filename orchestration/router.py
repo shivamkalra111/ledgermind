@@ -48,7 +48,10 @@ class IntentRouter:
                 r"(?:what(?:'s| is)|show|get|find|list)\s+(?:my|our)\s+(.+)",
                 r"(?:total|sum|count|average)\s+(?:of\s+)?(?:my|our)?\s*(.+)",
                 r"(?:how much|how many)\s+(.+)",
-                r"(?:show|list|get)\s+(?:all\s+)?(?:sales|purchases|invoices|transactions|vendors)",
+                r"(?:show|list|get)\s+(?:all\s+)?(?:sales|purchases|invoices|transactions|vendors|balance|bank|entries)",
+                r"(?:what is|what's)\s+(?:the\s+)?(?:latest|current|last|final)\s+(?:balance|entry|transaction)",
+                r"(?:show|get|list)\s+(?:last|latest|recent)\s+\d*\s*(?:entries|transactions|records|rows)",
+                r"(?:balance|entries|transactions|records)\s+(?:for|in|from)\s+(.+)",
             ],
             IntentType.COMPLIANCE_CHECK: [
                 r"(?:run|check|audit|verify)\s+compliance",
@@ -117,17 +120,35 @@ class IntentRouter:
         # If no pattern matched, use heuristics
         lower_input = user_input.lower()
         
-        # Data query indicators
-        if any(kw in lower_input for kw in ["my", "our", "total", "sum", "show", "list"]):
+        # Data query indicators (check these first - more specific)
+        data_keywords = ["balance", "entries", "transactions", "invoices", "sales", 
+                        "purchases", "vendors", "bank", "ledger", "records", "rows",
+                        "latest", "last", "recent", "total", "sum", "average", "count"]
+        if any(kw in lower_input for kw in data_keywords):
+            return ParsedIntent(IntentType.DATA_QUERY, 0.7, extracted_query=user_input)
+        
+        if any(kw in lower_input for kw in ["my", "our", "show", "list", "get"]):
             return ParsedIntent(IntentType.DATA_QUERY, 0.6, extracted_query=user_input)
         
-        # Knowledge query indicators  
-        if any(kw in lower_input for kw in ["what is", "explain", "section", "rule", "gst", "tax"]):
+        # Knowledge query indicators (more generic GST/tax questions)
+        if any(kw in lower_input for kw in ["explain", "section", "rule", "definition", "meaning"]):
             return ParsedIntent(IntentType.KNOWLEDGE_QUERY, 0.6, extracted_query=user_input)
         
-        # Default to knowledge query for questions
-        if user_input.endswith("?"):
+        # "What is X" - check if X is data-related or concept-related
+        if "what is" in lower_input or "what's" in lower_input:
+            # If asking about data concepts, route to data
+            if any(kw in lower_input for kw in data_keywords):
+                return ParsedIntent(IntentType.DATA_QUERY, 0.7, extracted_query=user_input)
+            # Otherwise, assume knowledge query
+            return ParsedIntent(IntentType.KNOWLEDGE_QUERY, 0.6, extracted_query=user_input)
+        
+        # Default to knowledge query for questions about GST/tax
+        if any(kw in lower_input for kw in ["gst", "cgst", "sgst", "igst", "itc", "tax"]):
             return ParsedIntent(IntentType.KNOWLEDGE_QUERY, 0.5, extracted_query=user_input)
+        
+        # Default to data query for questions ending with ?
+        if user_input.endswith("?"):
+            return ParsedIntent(IntentType.DATA_QUERY, 0.4, extracted_query=user_input)
         
         # Fall back to LLM classification if available
         if self.llm:

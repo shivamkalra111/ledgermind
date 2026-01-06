@@ -53,13 +53,14 @@ class AgentWorkflow:
     3. Aggregate results → Generate response
     """
     
-    def __init__(self, customer: Optional["CustomerContext"] = None):
+    def __init__(self, customer: Optional["CustomerContext"] = None, auto_load: bool = True):
         """
         Initialize workflow with customer context.
         
         Args:
             customer: CustomerContext for data isolation.
                      If None, uses global DuckDB (legacy mode).
+            auto_load: If True, automatically detect and load changed files.
         """
         self.customer = customer
         
@@ -71,10 +72,12 @@ class AgentWorkflow:
         if customer:
             self.data_engine = customer.get_data_engine()
             self._data_dir = customer.data_dir
+            self._data_state = customer.get_data_state_manager()
         else:
             # Legacy mode - global database
             self.data_engine = DataEngine()
             self._data_dir = None
+            self._data_state = None
         
         # Initialize agents with customer-scoped data engine
         self.discovery_agent = DiscoveryAgent(self.data_engine, self.llm)
@@ -86,11 +89,90 @@ class AgentWorkflow:
         
         # Track state
         self._data_loaded = False
+        
+        # Auto-load changed files on startup
+        if auto_load and self._data_state:
+            self._smart_load_data()
     
     @property
     def customer_id(self) -> Optional[str]:
         """Get current customer ID."""
         return self.customer.customer_id if self.customer else None
+    
+    def _smart_load_data(self) -> Optional[str]:
+        """
+        Smart data loading - only load new or changed files.
+        
+        Returns:
+            Summary message if changes were made, None otherwise.
+        """
+        if not self._data_state:
+            return None
+        
+        # Get existing tables to verify state matches DuckDB reality
+        existing_tables = self.data_engine.list_tables()
+        summary = self._data_state.get_summary(existing_tables=existing_tables)
+        
+        # Nothing to do
+        if not summary["needs_reload"] and summary["loaded_files"] > 0:
+            self._data_loaded = True
+            return None
+        
+        # Get files that need loading (with verification)
+        files_to_load = self._data_state.get_files_to_load(existing_tables=existing_tables)
+        tables_to_delete = self._data_state.get_tables_to_delete()
+        
+        messages = []
+        
+        # Delete tables for removed files
+        for table_name in tables_to_delete:
+            try:
+                self.data_engine.execute(f"DROP TABLE IF EXISTS {table_name}")
+                messages.append(f"🗑️ Removed table: {table_name}")
+            except Exception:
+                pass
+        
+        # Load new/modified files
+        for filename, file_path, change_type in files_to_load:
+            try:
+                # Load based on file type
+                if file_path.suffix.lower() in [".xlsx", ".xls"]:
+                    table_name = self.data_engine.load_excel(file_path)
+                else:
+                    table_name = self.data_engine.load_csv(file_path)
+                
+                # Get row count (convert to int for JSON serialization)
+                try:
+                    row_count = int(self.data_engine.query(f"SELECT COUNT(*) as cnt FROM {table_name}").iloc[0]["cnt"])
+                except:
+                    row_count = None
+                
+                # Mark as loaded
+                self._data_state.mark_file_loaded(
+                    filename=filename,
+                    table_name=table_name,
+                    row_count=row_count
+                )
+                
+                icon = "🆕" if change_type.value == "new" else "🔄"
+                messages.append(f"{icon} Loaded: {filename} → {table_name}")
+                
+            except Exception as e:
+                messages.append(f"❌ Failed to load {filename}: {e}")
+        
+        # Clean up deleted files from state
+        for change in self._data_state.detect_changes():
+            if change.change_type.value == "deleted":
+                self._data_state.mark_file_deleted(change.filename)
+        
+        # Save state
+        self._data_state.save()
+        
+        if files_to_load or tables_to_delete:
+            self._data_loaded = True
+            return "\n".join(messages)
+        
+        return None
     
     def run(self, user_input: str) -> str:
         """
@@ -133,7 +215,7 @@ class AgentWorkflow:
             return f"❌ Error: {str(e)}"
     
     def _handle_folder_analysis(self, folder_path: Optional[str]) -> str:
-        """Handle folder analysis request."""
+        """Handle folder analysis request with smart change detection."""
         
         # If no path provided and customer has data dir, use that
         if not folder_path:
@@ -151,7 +233,11 @@ class AgentWorkflow:
         if not path.exists():
             return f"❌ Folder not found: {path}"
         
-        # Run discovery agent
+        # Check if this is the customer's data directory (use smart loading)
+        if self._data_state and path == self._data_dir:
+            return self._smart_folder_analysis()
+        
+        # Legacy: Run full discovery for arbitrary folders
         result = self.discovery_agent.discover(path)
         self._data_loaded = True
         
@@ -178,6 +264,78 @@ class AgentWorkflow:
                 response += f"  - {error}\n"
         
         response += "\n✅ Data loaded! You can now run compliance checks or ask questions about your data."
+        
+        return response
+    
+    def _smart_folder_analysis(self) -> str:
+        """
+        Smart folder analysis with change detection.
+        Only loads new/modified files.
+        """
+        if not self._data_state:
+            return "❌ Data state manager not available."
+        
+        summary = self._data_state.get_summary()
+        
+        # Get changes
+        from core.data_state import FileChangeType
+        changes = self._data_state.detect_changes()
+        
+        # Build response header
+        response = f"""
+## 📁 Smart Data Analysis
+
+**Data Folder:** {self._data_dir}
+**Total Files:** {summary['total_files']}
+**Previously Loaded:** {summary['loaded_files']}
+"""
+        
+        # Show change summary
+        new_count = summary['new_files']
+        mod_count = summary['modified_files']
+        del_count = summary['deleted_files']
+        
+        if new_count == 0 and mod_count == 0 and del_count == 0:
+            # No changes
+            response += "\n### ✅ No Changes Detected\n"
+            response += "All files are up to date.\n"
+            
+            # Show loaded tables
+            loaded = self._data_state.get_loaded_tables()
+            if loaded:
+                response += "\n**Loaded Tables:**\n"
+                for filename, table_name in loaded.items():
+                    state = self._data_state.state.files.get(filename)
+                    rows = f" ({state.row_count} rows)" if state and state.row_count else ""
+                    response += f"  - `{table_name}`{rows} ← {filename}\n"
+            
+            self._data_loaded = True
+            return response
+        
+        # Process changes
+        response += f"\n### 🔍 Changes Detected\n"
+        response += f"  - 🆕 New files: {new_count}\n"
+        response += f"  - 🔄 Modified files: {mod_count}\n"
+        response += f"  - 🗑️ Deleted files: {del_count}\n"
+        
+        # Load changes
+        load_result = self._smart_load_data()
+        
+        if load_result:
+            response += f"\n### 📥 Loading Results\n"
+            for line in load_result.split("\n"):
+                response += f"  {line}\n"
+        
+        # Show all loaded tables
+        loaded = self._data_state.get_loaded_tables()
+        if loaded:
+            response += "\n### 📊 Available Tables\n"
+            for filename, table_name in loaded.items():
+                state = self._data_state.state.files.get(filename)
+                rows = f" ({state.row_count} rows)" if state and state.row_count else ""
+                response += f"  - `{table_name}`{rows}\n"
+        
+        response += "\n✅ Data ready! Ask questions or run compliance check."
         
         return response
     
@@ -246,38 +404,180 @@ class AgentWorkflow:
         if not self._data_loaded:
             return "⚠️ No data loaded. Please analyze a folder first."
         
-        if not query:
-            # Show available data
-            return self.discovery_agent.get_summary()
-        
-        # Try to convert natural language to SQL using LLM
         tables = self.data_engine.list_tables()
         
-        prompt = f"""Convert this question to a SQL query.
+        if not query:
+            return self._show_available_data()
+        
+        # Handle special commands that should show data summary
+        query_lower = query.lower().strip()
+        if query_lower in ["data", "tables", "available", "available data", "what data"]:
+            return self._show_available_data()
+        
+        # Get table schemas for better SQL generation
+        schema_info = self._get_table_schemas(tables)
+        
+        prompt = f"""You are a SQL expert. Convert this natural language question to a DuckDB SQL query.
 
-Available tables: {', '.join(tables)}
+DATABASE SCHEMA:
+{schema_info}
 
-Question: {query}
+USER QUESTION: {query}
 
-Rules:
-1. Use only the tables listed above
-2. Return ONLY the SQL query, nothing else
-3. If unsure, return SELECT * FROM first_table LIMIT 10
+RULES:
+1. Use ONLY the tables and columns listed above - look at the actual column names
+2. Return ONLY the raw SQL query - no explanations, no markdown, no backticks
+3. Column names with spaces MUST be quoted with double quotes
+4. Look at the sample data to understand date formats and use appropriate filtering
+5. For date columns that are VARCHAR, use LIKE patterns based on the format you see in sample data
+6. For date columns that are DATE type, use strftime() for filtering
+7. Query ONE table at a time - don't try to UNION different table structures
+8. For aggregations (SUM, COUNT, AVG), always give alias names
+9. Limit results to reasonable amounts (LIMIT 20) unless user asks for all
+10. Use the exact column names as shown in the schema
 
-SQL Query:"""
+SQL:"""
 
         try:
-            sql = self.llm.generate(prompt, max_tokens=200)
-            sql = sql.strip().strip('`').strip()
+            sql = self.llm.generate(prompt, max_tokens=300)
+            sql = self._clean_sql_response(sql)
             
+            # Validate and execute
             if sql.upper().startswith("SELECT"):
-                result = self.data_engine.query(sql)
-                return f"**Query:** `{sql}`\n\n**Results:**\n```\n{result.to_string()}\n```"
+                try:
+                    result = self.data_engine.query(sql)
+                    
+                    if len(result) == 0:
+                        return f"**Query:** `{sql}`\n\n**Results:** No data found matching your criteria."
+                    
+                    return f"**Query:** `{sql}`\n\n**Results ({len(result)} rows):**\n```\n{result.to_string(index=False)}\n```"
+                except Exception as db_error:
+                    # Try to fix common SQL issues and retry
+                    fixed_result = self._try_fix_and_execute(sql, query, tables, str(db_error))
+                    if fixed_result:
+                        return fixed_result
+                    # Show helpful error with available data
+                    return f"❌ Couldn't run that query. Error: {str(db_error)[:100]}\n\n" + self._show_available_data()
             else:
-                return f"Could not generate valid SQL for: {query}"
+                return self._show_available_data()
                 
         except Exception as e:
             return f"❌ Query failed: {str(e)}"
+    
+    def _clean_sql_response(self, sql: str) -> str:
+        """Clean up LLM SQL response."""
+        sql = sql.strip()
+        
+        # Remove markdown code blocks
+        if sql.startswith("```"):
+            lines = sql.split("\n")
+            sql = "\n".join(line for line in lines if not line.startswith("```"))
+            sql = sql.strip()
+        
+        # Remove language hints
+        if sql.lower().startswith("sql"):
+            sql = sql[3:].strip()
+        
+        # Remove backticks
+        sql = sql.strip('`').strip()
+        
+        # Take only first statement
+        if ";" in sql:
+            sql = sql.split(";")[0].strip()
+        
+        return sql
+    
+    def _get_table_schemas(self, tables: list) -> str:
+        """Get schema information for all tables."""
+        schema_parts = []
+        
+        for table in tables:
+            try:
+                # Get column info
+                columns_df = self.data_engine.query(f"DESCRIBE {table}")
+                columns = columns_df['column_name'].tolist()
+                types = columns_df['column_type'].tolist()
+                
+                # Get sample rows
+                sample = self.data_engine.query(f"SELECT * FROM {table} LIMIT 3")
+                
+                schema_parts.append(f"TABLE: {table}")
+                schema_parts.append(f"  Columns: {', '.join(f'\"{c}\" ({t})' for c, t in zip(columns, types))}")
+                
+                # Show sample data for context
+                if len(sample) > 0:
+                    schema_parts.append(f"  Sample data:")
+                    for idx, row in sample.head(2).iterrows():
+                        row_str = ", ".join(f'{k}={repr(v)[:30]}' for k, v in row.items())
+                        schema_parts.append(f"    {row_str}")
+                
+                # Get row count
+                count = self.data_engine.query(f"SELECT COUNT(*) as cnt FROM {table}").iloc[0]['cnt']
+                schema_parts.append(f"  Total rows: {count}")
+                schema_parts.append("")
+            except Exception:
+                schema_parts.append(f"TABLE: {table} (schema unavailable)")
+                schema_parts.append("")
+        
+        return "\n".join(schema_parts)
+    
+    def _try_fix_and_execute(self, original_sql: str, query: str, tables: list, error: str) -> Optional[str]:
+        """Try to fix common SQL issues and re-execute."""
+        
+        # Ask LLM to fix the SQL based on the error
+        fix_prompt = f"""The following SQL query failed with an error. Fix it.
+
+ORIGINAL SQL: {original_sql}
+
+ERROR: {error}
+
+RULES:
+1. Return ONLY the fixed SQL - no explanations
+2. If the error is about column names, check for typos or missing quotes
+3. If the error is about date functions, try using LIKE patterns instead
+4. If the error is about missing tables, use an available table
+
+FIXED SQL:"""
+        
+        try:
+            fixed_sql = self.llm.generate(fix_prompt, max_tokens=300)
+            fixed_sql = self._clean_sql_response(fixed_sql)
+            
+            if fixed_sql.upper().startswith("SELECT") and fixed_sql != original_sql:
+                result = self.data_engine.query(fixed_sql)
+                if len(result) > 0:
+                    return f"**Query:** `{fixed_sql}`\n\n**Results ({len(result)} rows):**\n```\n{result.to_string(index=False)}\n```"
+        except:
+            pass
+        
+        return None
+    
+    def _show_available_data(self) -> str:
+        """Show what data is available to query."""
+        tables = self.data_engine.list_tables()
+        
+        summary = "## 📊 Available Data\n\n"
+        
+        for table in tables:
+            try:
+                count = self.data_engine.query(f"SELECT COUNT(*) as cnt FROM {table}").iloc[0]['cnt']
+                columns_df = self.data_engine.query(f"DESCRIBE {table}")
+                columns = columns_df['column_name'].tolist()
+                
+                summary += f"### {table}\n"
+                summary += f"- **Rows:** {count}\n"
+                summary += f"- **Columns:** {', '.join(columns)}\n\n"
+            except:
+                summary += f"### {table}\n\n"
+        
+        summary += "---\n\n"
+        summary += "💡 **Example questions you can ask:**\n"
+        summary += "- Show me all data from [table name]\n"
+        summary += "- What is the total of [column name]?\n"
+        summary += "- List records where [column] contains [value]\n"
+        summary += "- Show the latest [number] records\n"
+        
+        return summary
     
     def _handle_knowledge_query(self, query: Optional[str]) -> str:
         """

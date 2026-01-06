@@ -94,8 +94,9 @@ DEFAULT_CUSTOMER_ID = None  # None = require selection
 #   ├── {customer_id}.duckdb  # Customer's database
 #   └── profile.json       # Customer metadata
 
-# Reserved customer IDs (cannot be used)
-RESERVED_CUSTOMER_IDS = {"sample_company", "test", "admin", "system", "default"}
+# Reserved customer IDs (cannot be used for new companies)
+# Note: sample_company is allowed as it's the demo data folder
+RESERVED_CUSTOMER_IDS = {"test", "admin", "system", "default"}
 
 # =============================================================================
 # AGENT SETTINGS

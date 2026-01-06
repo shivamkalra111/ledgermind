@@ -203,7 +203,9 @@ def is_blocked_credit(item_description: str) -> bool:
     desc_lower = item_description.lower()
     
     for blocked_item in blocked:
-        if blocked_item["item"].lower() in desc_lower:
+        # CSV has 'item_description' column
+        item_name = blocked_item.get("item_description", blocked_item.get("item", ""))
+        if item_name.lower() in desc_lower:
             return True
     return False
 
@@ -316,7 +318,7 @@ def get_compliance_rules() -> Dict:
         },
         "section_17_5": {
             "description": "Blocked Input Tax Credit",
-            "items": [item["item"] for item in load_blocked_credits()]
+            "items": [item.get("item_description", item.get("item", "")) for item in load_blocked_credits()]
         },
         "itc_time_limit": {
             "description": "ITC claim deadline",

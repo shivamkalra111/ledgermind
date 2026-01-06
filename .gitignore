@@ -4,6 +4,11 @@ __pycache__/
 chroma_db/
 .DS_Store
 
+# Customer data (isolated per customer)
+*.duckdb
+*.duckdb.wal
+workspace/*/data_state.json
+
 # Metrics and evaluation results
 rag_metrics.jsonl
 evaluation_results.json

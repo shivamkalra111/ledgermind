@@ -116,8 +116,8 @@ class CustomerContext:
         if len(customer_id) > 50:
             raise ValueError(f"Customer ID too long (max 50 chars): {customer_id}")
         
-        # Reserved names
-        reserved = {"sample_company", "test", "admin", "system", "default"}
+        # Reserved names (sample_company is allowed as demo data)
+        reserved = {"test", "admin", "system", "default"}
         if customer_id in reserved:
             raise ValueError(f"Reserved customer ID: {customer_id}")
         
@@ -210,6 +210,15 @@ class CustomerContext:
             self._data_engine = DataEngine(self.duckdb_path)
         
         return self._data_engine
+    
+    def get_data_state_manager(self):
+        """
+        Get data state manager for smart file change detection.
+        
+        Returns a DataStateManager that tracks which files have changed.
+        """
+        from core.data_state import DataStateManager
+        return DataStateManager(self)
     
     def close(self) -> None:
         """Close data engine connection."""

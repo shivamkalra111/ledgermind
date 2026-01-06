@@ -172,6 +172,61 @@ Build the actual compliance checking logic that makes LedgerMind valuable.
 | Section 17(5) Detection | Flag blocked ITC claims | Prevent reversals |
 | ITC Reconciliation | Match with GSTR-2A/2B | Ensure claimable credits |
 | Compliance Report | Actionable audit summary | One-click audit prep |
+| **Specialized SQL Model** | Use `sqlcoder` for Text-to-SQL | Better query accuracy |
+| **User Authentication** | API key based access | Multi-user security |
+
+### Note on Current Limitations
+
+**Text-to-SQL (Phase 1 limitation):**
+Currently using `qwen2.5:7b-instruct` (general-purpose) for SQL generation. 
+Phase 2 will add specialized model selection:
+- `sqlcoder` or `defog/sqlcoder-7b` for SQL generation
+- Keep `qwen2.5:7b-instruct` for knowledge queries
+
+**User Authentication (Phase 1 → Phase 2):**
+
+Current: **Company-based isolation** (local CLI)
+```
+workspace/
+├── company_a/        # Each company has isolated data
+├── company_b/
+```
+
+Phase 2: **User-based API authentication**
+```
+User (API Key) → Multiple Companies → Isolated Data
+     │
+     └── user_id: "usr_abc123"
+         ├── api_key: "lm_live_sk_..."
+         ├── companies: ["company_a", "company_b"]
+         └── permissions: ["read", "write", "admin"]
+```
+
+**Phase 2 API Design:**
+```python
+# API endpoint structure
+POST /api/v1/query
+Headers:
+  Authorization: Bearer lm_live_sk_xxxxx
+  X-Company-ID: company_a  (optional, uses default if not provided)
+
+Body:
+{
+  "query": "Show me November balance",
+  "context": "data"  # or "gst_knowledge"
+}
+```
+
+**User table schema (Phase 2):**
+```sql
+CREATE TABLE users (
+  user_id TEXT PRIMARY KEY,
+  email TEXT UNIQUE,
+  api_key_hash TEXT,
+  created_at TIMESTAMP,
+  companies JSON  -- ["company_a", "company_b"]
+);
+```
 
 ### Technical Milestones
 
