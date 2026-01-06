@@ -32,6 +32,14 @@ pdfplumber>=0.10.0         # Advanced PDF parsing
 langgraph>=0.0.40          # Agent orchestration
 
 # =============================================================================
+# API Framework
+# =============================================================================
+fastapi>=0.109.0           # REST API framework
+uvicorn[standard]>=0.27.0  # ASGI server
+python-multipart>=0.0.6    # File upload support
+aiofiles>=23.0.0           # Async file operations
+
+# =============================================================================
 # Utilities
 # =============================================================================
 python-dotenv>=1.0.0       # Environment variables

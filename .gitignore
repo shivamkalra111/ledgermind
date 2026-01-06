@@ -9,6 +9,9 @@ chroma_db/
 *.duckdb.wal
 workspace/*/data_state.json
 
+# API keys (sensitive!)
+workspace/.api_keys.json
+
 # Metrics and evaluation results
 rag_metrics.jsonl
 evaluation_results.json
