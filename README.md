@@ -1,456 +1,177 @@
 # LedgerMind
 
-**Your AI-Powered CFO for Small Businesses** — Making tax compliance simple and automatic.
-
-[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Tests: 166 Passing](https://img.shields.io/badge/tests-166%20passing-brightgreen.svg)]()
-[![Status: Phase 1](https://img.shields.io/badge/status-Phase%201%20Complete-success.svg)]()
+**AI CFO for Small Businesses** — Ask anything about your finances.
 
 ---
 
-## 🎯 The Problem We Solve
+## 🎯 What Is This?
 
-**Indian MSMEs face a nightmare:**
-- Messy Excel files everywhere (sales, purchases, bank statements)
-- Confusing GST rules that change every year
-- Fear of tax penalties and compliance issues
-- No idea if vendors are reliable or cash flow is healthy
-- Can't afford a full-time CFO or CA
-
-**LedgerMind is your AI assistant that:**
-- Reads your Excel files and understands them automatically
-- Knows all GST rules (updated for 2025-26)
-- Finds tax savings you're missing
-- Warns you before compliance deadlines
-- Answers your finance questions in plain language
-
-**100% Private** — Everything runs on your computer. Your data never goes to the cloud.
-
-**🔐 Customer Isolation** — Each company's data is stored separately and securely.
+Small businesses have messy Excel files and confusing tax rules.  
+**LedgerMind** is an AI that reads your files and answers questions.
 
 ---
 
-## 🧠 How It Works (Simple Explanation)
+## 🧠 How It Works (For Non-Tech People)
 
-### 📂 Smart Data Understanding
-
-**Your data is unique** — every company names their columns differently:
-
-| Your Column Name | Another Company | What LedgerMind Understands |
-|-----------------|-----------------|----------------------------|
-| "Inv No" | "Invoice Number" | `invoice_number` |
-| "Customer Name" | "Party Name" | `party_name` |
-| "GST Amt" | "Tax Amount" | `tax_amount` |
-
-**The Discovery Agent** uses AI to:
-1. Read your Excel/CSV files (any format)
-2. Understand what each column means
-3. Map it to a standard format
-4. Store in a fast database (DuckDB)
-
-This happens **automatically** — no configuration needed!
-
-### 🔄 Smart Data Loading
-
-LedgerMind automatically detects when your files change:
+### The Simple Flow
 
 ```
-📂 You add/update files → 🔍 System detects → 📥 Auto-reload → ✅ Ready
+┌─────────────────────────────────────────────────────────────────────┐
+│                                                                     │
+│  STEP 1: Upload                 STEP 2: Ask                        │
+│  ─────────────                  ─────────                          │
+│                                                                     │
+│  📁 Your Excel files    ───▶    💬 "What are my total sales?"      │
+│     (sales, purchases)                                              │
+│                                          │                          │
+│                                          ▼                          │
+│                                                                     │
+│                              ┌─────────────────┐                   │
+│                              │    🧠 AI Brain  │                   │
+│                              │                 │                   │
+│                              │  Reads files    │                   │
+│                              │  Knows GST rules│                   │
+│                              │  Finds answer   │                   │
+│                              └────────┬────────┘                   │
+│                                       │                             │
+│                                       ▼                             │
+│                                                                     │
+│                              📊 "Your total sales: ₹5,00,000"      │
+│                                                                     │
+│  STEP 3: Get Answer                                                │
+│  ──────────────────                                                 │
+│                                                                     │
+└─────────────────────────────────────────────────────────────────────┘
 ```
 
-- **New files**: Automatically loaded
-- **Modified files**: Automatically refreshed
-- **Deleted files**: Tables removed
-- **No changes**: Instant startup (no re-loading)
+### What You Can Ask
+
+| Question Type | Example | Where AI Looks |
+|---------------|---------|----------------|
+| **Your Data** | "Show my November sales" | Your Excel files |
+| **Tax Rules** | "What is CGST?" | GST knowledge base |
+| **Tax Rates** | "GST on laptops?" | Rate database |
+| **Compliance** | "Any tax issues?" | Checks your data |
+
+**One input box. AI figures out the rest.**
 
 ---
 
-Think of LedgerMind as having **3 AI employees** working for you:
+## 🔌 How Customers Use It
 
-```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                                                                         │
-│   📂 YOUR EXCEL FILES                                                   │
-│   (Sales, Purchases, Bank Statements)                                   │
-│                         │                                               │
-│                         ▼                                               │
-│   ┌─────────────────────────────────────────────────────────────────┐   │
-│   │                    🤖 AI BRAIN (LedgerMind)                     │   │
-│   │                                                                 │   │
-│   │   ┌───────────┐   ┌───────────┐   ┌───────────┐               │   │
-│   │   │ DISCOVERY │   │ AUDITOR   │   │ ADVISOR   │               │   │
-│   │   │   Agent   │   │   Agent   │   │   Agent   │               │   │
-│   │   │           │   │           │   │           │               │   │
-│   │   │ "I read   │   │ "I check  │   │ "I find   │               │   │
-│   │   │  your     │   │  for tax  │   │  savings  │               │   │
-│   │   │  files"   │   │  mistakes"│   │  & risks" │               │   │
-│   │   └───────────┘   └───────────┘   └───────────┘               │   │
-│   │         │               │               │                       │   │
-│   │         └───────────────┼───────────────┘                       │   │
-│   │                         ▼                                       │   │
-│   │              ┌─────────────────────┐                           │   │
-│   │              │   📚 KNOWLEDGE      │                           │   │
-│   │              │   GST Rules 2025    │                           │   │
-│   │              │   Tax Rates         │                           │   │
-│   │              │   Compliance Laws   │                           │   │
-│   │              └─────────────────────┘                           │   │
-│   └─────────────────────────────────────────────────────────────────┘   │
-│                         │                                               │
-│                         ▼                                               │
-│   📊 INSIGHTS FOR YOU                                                   │
-│   • "You overpaid ₹12,400 in GST last month"                           │
-│   • "Warning: Payment to ABC Traders is overdue"                        │
-│   • "Your best vendor is XYZ Supplies (98% reliable)"                  │
-│                                                                         │
-└─────────────────────────────────────────────────────────────────────────┘
+We provide an **API** (like OpenAI). Customers call it from their code.
+
+| What | How |
+|------|-----|
+| **Upload files** | `POST /api/v1/upload` + your Excel files |
+| **Ask anything** | `POST /api/v1/query` + your question |
+
+```bash
+# Example: Ask a question
+curl -X POST http://localhost:8000/api/v1/query \
+  -H "X-API-Key: YOUR_KEY" \
+  -d '{"query": "What is my total sales?"}'
+
+# Response
+{"answer": "Your total sales: ₹5,00,000"}
 ```
 
-### The 3 AI Agents Explained
-
-| Agent | What It Does | Real-World Analogy |
-|-------|--------------|-------------------|
-| 🔍 **Discovery Agent** | Reads your messy Excel files and organizes them | Like a junior accountant who sorts through your paperwork |
-| ✅ **Compliance Agent** | Checks if you're following GST rules correctly | Like a tax auditor checking your books |
-| 📈 **Strategist Agent** | Finds savings and warns about problems | Like a CFO giving you business advice |
+**No UI from us.** Customers build their own or use the API directly.
 
 ---
 
-## 💡 What Can You Ask LedgerMind?
-
-### About Your Data
-- *"What were my total sales last month?"*
-- *"Show me all purchases above ₹50,000"*
-- *"Which vendor do I owe the most?"*
-
-### About GST Rules
-- *"When should I file GSTR-3B?"*
-- *"What is Section 43B(h)?"*
-- *"Can I claim ITC on office furniture?"*
-- *"What is the GST rate on laptops?"*
-
-### Compliance Checks
-- *"Run a compliance check"*
-- *"Are there any tax issues?"*
-- *"Check my vendor payments"*
-
----
-
-## 📁 Project Structure
+## 📁 Project Structure (Simplified)
 
 ```
 ledgermind/
 │
-├── 🌐 api/                        # NEW: FastAPI backend (Phase 1B)
-│   ├── main.py                    # FastAPI app entry (THE PRODUCT)
-│   ├── routes/                    # API endpoints for customers
-│   └── middleware/                # API key authentication
+├── 🧠 LLM Brain
+│   ├── llm/                  # Talks to AI model
+│   └── orchestration/        # Routes questions to right place
 │
-├── 🔧 admin/                      # NEW: Internal tools (Phase 1B)
-│   ├── streamlit_app.py           # Admin UI for testing (NOT for customers)
-│   └── scripts/                   # API key generation, debugging
+├── 📊 Data Sources  
+│   ├── core/data_engine.py   # Reads customer Excel files
+│   ├── core/knowledge.py     # GST rules database
+│   └── db/                   # Tax rates (CSV files)
 │
-├── 🤖 agents/                     # The 3 AI workers
-│   ├── discovery.py               # Reads and organizes your files
-│   ├── compliance.py              # Checks tax rules
-│   └── strategist.py              # Gives business advice
+├── 🌐 API (for customers)
+│   └── api/                  # FastAPI endpoints
 │
-├── ⚙️ core/                        # The engine room
-│   ├── customer.py                # 🔐 Customer isolation & multi-tenancy
-│   ├── data_state.py              # 🔄 Smart file change detection
-│   ├── data_engine.py             # Turns Excel into searchable database
-│   ├── knowledge.py               # Stores GST rules for quick lookup
-│   ├── reference_data.py          # Loads tax rates from CSV files
-│   ├── query_classifier.py        # Routes questions to right source
-│   ├── guardrails.py              # Safety checks (validates GSTINs, etc.)
-│   ├── metrics.py                 # Tracks system performance
-│   ├── schema.py                  # Standard format for all data
-│   └── mapper.py                  # Maps messy headers to standard names
+├── 🔧 Internal Tools
+│   └── streamlit/            # Our testing UI (not for customers)
 │
-├── 🎯 orchestration/              # The traffic controller
-│   ├── router.py                  # Understands what you're asking
-│   └── workflow.py                # Coordinates the agents
-│
-├── 🧠 llm/                        # AI brain connection
-│   └── client.py                  # Talks to the Ollama AI model
-│
-├── 📊 db/                         # Reference data (pre-loaded)
-│   ├── README.md                  # Documentation for data files
-│   ├── gst/                       # GST-related data
-│   │   ├── slabs.csv              # Rate slabs (0%, 5%, 18%, 28%)
-│   │   ├── goods_hsn.csv          # GST on 89 products (HSN codes)
-│   │   ├── services_sac.csv       # GST on 50 services (SAC codes)
-│   │   └── blocked_itc.csv        # Section 17(5) blocked credits
-│   ├── msme/                      # MSME classification
-│   │   └── classification.csv     # Micro/Small/Medium limits
-│   └── india/                     # India reference data
-│       └── state_codes.csv        # All 38 GST state codes
-│
-├── 📚 knowledge/                  # Legal documents (PDFs)
-│   ├── gst/                       # CGST Act, Rules
-│   └── accounting/                # Accounting standards
-│
-├── 📂 workspace/                  # YOUR company data goes here
-│   ├── {company_id}/              # Each company has its own folder
-│   │   ├── data/                  # Excel/CSV files
-│   │   ├── {company_id}.duckdb    # Company's database (isolated)
-│   │   ├── data_state.json        # 🔄 Tracks file changes
-│   │   └── profile.json           # Company metadata
-│   └── sample_company/            # Example files to try
-│
-├── 🧪 tests/                      # Test suite (166 tests)
-│   ├── conftest.py                # Shared test fixtures
-│   ├── test_config.py             # Configuration tests
-│   ├── test_reference_data.py     # Data loading tests
-│   ├── test_guardrails.py         # Validation tests
-│   ├── test_query_classifier.py   # Query routing tests
-│   ├── test_customer.py           # 🔐 Customer isolation tests
-│   ├── test_data_state.py         # 🔄 Smart loading tests
-│   ├── test_agents.py             # Agent tests
-│   ├── test_orchestration.py      # Workflow tests
-│   └── test_integration.py        # End-to-end tests
-│
-├── 📖 docs/                       # Detailed documentation
-│   ├── ARCHITECTURE.md            # Technical deep-dive
-│   ├── ROADMAP.md                 # Development plan
-│   └── CODE_FLOW.md               # Step-by-step code walkthrough
-│
-├── 🔧 scripts/                    # Helper tools
-│   ├── create_sample_data.py      # Generate test data
-│   └── ingest_knowledge.py        # Load PDFs into knowledge base
-│
-├── main.py                        # 🚀 Start here!
-├── config.py                      # Settings (paths, model config)
-└── requirements.txt               # Required packages
+└── 📂 Customer Data
+    └── workspace/            # Each customer's files stored here
 ```
-
----
-
-## 🛡️ Safety Features (Guardrails)
-
-LedgerMind is designed to be **safe and reliable**:
-
-| Feature | What It Does |
-|---------|--------------|
-| **GSTIN Validation** | Checks if tax IDs are real and correctly formatted |
-| **Math Safety** | AI never does calculations — only the computer does (no mistakes!) |
-| **Data Locality** | Your files never leave your computer |
-| **Source Citations** | Always shows which rule or document an answer comes from |
-| **Section 43B(h)** | Validates 45-day MSME payment compliance |
-| **ITC Time Limits** | Checks if Input Tax Credit is still claimable |
-
----
-
-## 📈 Current Status
-
-### ✅ Phase 1 Complete!
-
-| Feature | Status | What You Can Do |
-|---------|--------|-----------------|
-| **Read Excel/CSV** | ✅ Ready | Drop your files, we understand them |
-| **GST Q&A** | ✅ Ready | Ask about CGST, SGST, ITC, slabs, returns |
-| **Tax Rate Lookup** | ✅ Ready | 89 goods + 50 services |
-| **Compliance Check** | ✅ Ready | Find tax issues |
-| **GSTIN Validation** | ✅ Ready | Verify tax IDs |
-| **Knowledge Base** | ✅ Ready | 1,276 GST rule chunks |
-| **Query Classifier** | ✅ Ready | Routes questions to correct source |
-| **Test Suite** | ✅ Ready | 166 tests passing |
-| **Customer Isolation** | ✅ Ready | Each company's data separated |
-| **Smart Data Loading** | ✅ Ready | Auto-detects file changes |
-
-### ⚠️ Phase 1 Limitations
-
-| Limitation | Description | Planned For |
-|------------|-------------|-------------|
-| **No User Auth** | CLI shows all companies (security risk) | Phase 1B: API + Streamlit |
-| **SQL Generation** | Uses general-purpose LLM for SQL | Phase 2: `sqlcoder` model |
-| **CLI Only** | No web interface | Phase 1B: Streamlit UI |
-
-### 🚀 Next: Phase 1B — API Backend (Immediate)
-
-**Why?** The current CLI shows ALL companies to any user — **security risk**.
-
-**Product Model:** API-only (like OpenAI, Stripe) — no customer-facing UI.
-
-| Feature | Priority | For Whom | Description |
-|---------|----------|----------|-------------|
-| **FastAPI Backend** | P0 | Customers | REST API (the product) |
-| **API Key Auth** | P0 | Customers | Secure per-customer access |
-| **Upload Endpoint** | P0 | Customers | Upload Excel/CSV via API |
-| **Streamlit Admin** | P1 | Us | Internal testing tool |
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│  CUSTOMERS                           US (Internal)          │
-│  ┌──────────────┐                   ┌──────────────┐       │
-│  │ Their App/   │                   │  Streamlit   │       │
-│  │ Python/JS    │                   │  Admin Tool  │       │
-│  └──────┬───────┘                   └──────┬───────┘       │
-│         │ API calls                        │ Testing       │
-│         ▼                                  ▼               │
-│  ┌─────────────────────────────────────────────────┐       │
-│  │              FASTAPI (The Product)              │       │
-│  │  POST /upload  POST /query  GET /compliance     │       │
-│  └─────────────────────────────────────────────────┘       │
-└─────────────────────────────────────────────────────────────┘
-```
-
-### Coming Soon 🚧
-
-| Feature | Phase | For Whom | Description |
-|---------|-------|----------|-------------|
-| **FastAPI Backend** | Phase 1B | Customers | REST API (the product) |
-| **API Key Auth** | Phase 1B | Customers | Per-customer authentication |
-| **Upload/Query Endpoints** | Phase 1B | Customers | Core functionality via API |
-| **Streamlit Admin** | Phase 1B | Us | Internal testing/debugging |
-| **Google Sheets Sync** | Phase 2 | Customers | Auto-sync from spreadsheets |
-| **Specialized SQL Model** | Phase 2 | Customers | Better query accuracy |
-| **ITC Reconciliation** | Phase 2 | Customers | Match with GSTR-2B |
-| **43B(h) Alerts** | Phase 2 | Customers | MSME payment warnings |
-| **Vendor Scoring** | Phase 3 | Customers | Reliability rankings |
-| **PDF Reports** | Phase 3 | Customers | Export audit reports |
 
 ---
 
 ## 🚀 Quick Start
 
-### Step 1: Install (One Time)
-
 ```bash
-cd ledgermind
-python -m venv venv
-source venv/bin/activate
+# 1. Setup
 pip install -r requirements.txt
-```
 
-### Step 2: Start AI Brain
-
-```bash
-# Install Ollama (if not installed)
-curl -fsSL https://ollama.com/install.sh | sh
-
-# Download the AI model (4GB, one time)
+# 2. Start AI
 ollama pull qwen2.5:7b-instruct
-
-# Start Ollama server
 ollama serve
+
+# 3. Start API
+uvicorn api.app:app --port 8000
+
+# 4. Create API key for a customer
+python -m streamlit.api_keys create company_name
 ```
 
-### Step 3: Run LedgerMind
-
-```bash
-python main.py
-```
-
-### Step 4: Try It!
-
-```
-You> analyze folder workspace/sample_company/
-You> run compliance check
-You> When should I file GSTR-3B?
-You> What is the GST rate on laptops?
-You> What is CGST?
-```
-
-### Step 5: Run Tests
-
-```bash
-# Run all tests
-pytest tests/ -v
-
-# Run specific test file
-pytest tests/test_guardrails.py -v
-```
+**API ready at:** http://localhost:8000/docs
 
 ---
 
-## 📅 Development Roadmap
+## 📈 Current Status
 
-```
-       DONE ✅                 NOW ◀──               FUTURE
-         │                      │                       │
-         ▼                      ▼                       ▼
-┌─────────────────┐   ┌─────────────────┐   ┌─────────────────┐   ┌───────────────┐
-│   PHASE 1       │   │   PHASE 1B      │   │   PHASE 2       │   │  PHASE 3      │
-│   FOUNDATION    │   │   API BACKEND   │   │   COMPLIANCE    │   │  INTELLIGENCE │
-│   ✅ COMPLETE   │   │   ◀── NEXT      │   │                 │   │               │
-│                 │   │                 │   │                 │   │               │
-│ ✅ Read files   │   │ • FastAPI       │   │ • Google Sheets │   │ • Vendor      │
-│ ✅ GST Q&A      │   │   (product)     │   │   sync          │   │   scores      │
-│ ✅ Tax rates    │   │ • API keys      │   │ • SQL model     │   │ • Cash flow   │
-│ ✅ Knowledge    │   │ • Upload API    │   │   (sqlcoder)    │   │   forecast    │
-│ ✅ Guardrails   │   │ • Query API     │   │ • Tax verify    │   │ • PDF exports │
-│ ✅ Tests (166)  │   │ • Streamlit     │   │ • 43B(h) alerts │   │               │
-│ ✅ Data isolate │   │   (internal)    │   │ • ITC matching  │   │               │
-└─────────────────┘   └─────────────────┘   └─────────────────┘   └───────────────┘
+| What | Status |
+|------|--------|
+| AI Brain | ✅ Working |
+| Read Excel/CSV | ✅ Working |
+| GST Knowledge | ✅ 1,276 rules loaded |
+| API | ✅ 2 endpoints |
+| Customer Isolation | ✅ Each customer separate |
 
-Product Model: API-only (like OpenAI) — customers call our API from their apps
-```
+### Known Limitations
+
+- SQL accuracy ~70% (improving in Phase 2)
+- Needs Ollama running locally
 
 ---
 
-## 📚 GST 2025-26 Knowledge
+## 🗺️ Roadmap
 
-LedgerMind knows about:
-
-| Category | Coverage |
-|----------|----------|
-| **GST Slabs** | 0%, 5%, 12%, 18%, 28% + Cess |
-| **HSN Codes** | 89 common goods with rates |
-| **SAC Codes** | 50 common services with rates |
-| **Section 43B(h)** | MSME payment rules (45 days) |
-| **Section 17(5)** | 15 blocked ITC items |
-| **MSME Classification** | Micro/Small/Medium limits |
-| **State Codes** | All 38 GST state codes |
+```
+DONE ✅              NEXT                    FUTURE
+   │                  │                        │
+   ▼                  ▼                        ▼
+┌────────┐      ┌────────┐      ┌────────┐      ┌────────┐
+│ Phase 1│      │Phase 1B│      │ Phase 2│      │ Phase 3│
+│        │      │        │      │        │      │        │
+│ AI Core│─────▶│  API   │─────▶│ Better │─────▶│Advanced│
+│        │      │        │      │  SQL   │      │Features│
+│  DONE  │      │  DONE  │      │        │      │        │
+└────────┘      └────────┘      └────────┘      └────────┘
+```
 
 ---
 
 ## ❓ FAQ
 
-**Q: Is my data safe?**
-> Yes! Everything runs on your computer. No data goes to any server.
+**Q: Is my data safe?**  
+> Yes. Everything runs on your computer. Nothing goes to cloud.
 
-**Q: Do I need internet?**
-> Only to download the AI model once. After that, works offline.
+**Q: Why no web dashboard?**  
+> We're API-only. Like OpenAI — you call our API, build your own UI.
 
-**Q: How accurate is it?**
-> Tax rules come from official CGST Act/Rules. AI provides explanations but always verify with your CA for critical decisions.
-
-**Q: What Excel formats work?**
-> .xlsx, .xls, and .csv files. Any format your accountant uses.
-
-**Q: Can I use it for multiple companies?**
-> Yes! LedgerMind automatically creates separate workspaces for each company. Just run `python main.py` and select "new" to create a new company. Each company has its own database and data folder.
-
-**Q: Is there an API I can use?**
-> Coming in Phase 1B (immediate next). FastAPI backend with API key authentication. You'll call our endpoints from your own code — no UI needed (like OpenAI API).
-
-**Q: Will there be a web dashboard?**
-> No customer-facing UI planned. We provide API only. Streamlit is internal for our testing/debugging. You build your own UI or use our API directly.
-
-**Q: What if my queries don't work well?**
-> Phase 1 uses a general-purpose LLM. Try rephrasing your question, or ask "show my data" to see available tables. Phase 2 will use a specialized SQL model for better accuracy.
-
-**Q: Is the current CLI secure for production?**
-> No. The CLI shows all companies which is a security risk. Phase 1B adds API key authentication so each customer sees only their data.
-
-**Q: Can I sync from Google Sheets?**
-> Coming in Phase 2. Your Google Sheet will auto-sync to our API via webhooks.
+**Q: What if AI gives wrong answer?**  
+> Rephrase your question. Phase 2 will have better accuracy.
 
 ---
 
-## 🤝 Contributing
-
-This project is under active development. Ideas and contributions welcome!
-
----
-
-## 📄 License
-
-MIT License — Free to use for personal and commercial purposes.
-
----
-
-**Built with ❤️ for Indian MSMEs**
-
-*Making tax compliance less painful, one Excel file at a time.*
+**Built for Indian MSMEs 🇮🇳**

@@ -1,593 +1,267 @@
 # LedgerMind - Development Roadmap
 
-> End-to-end technical roadmap for the Agentic AI CFO Platform
+> The LLM is the product. Everything else is plumbing.
 
 **Last Updated:** January 2026  
-**Current Phase:** 1 Complete ✅ | Phase 2 Next
+**Current Phase:** 1B Complete ✅
 
 ---
 
-## Vision Statement
+## Core Philosophy
 
-Build an **autonomous AI CFO** for MSMEs that:
-- Transforms messy Excel/CSV data into structured insights
-- Identifies tax savings and compliance risks automatically
-- Provides strategic vendor and cash flow analysis
-- Runs 100% locally with zero cloud dependency
+```
+┌─────────────────────────────────────────────────────────────┐
+│                                                             │
+│   USER ASKS QUESTION                                        │
+│           │                                                 │
+│           ▼                                                 │
+│   ┌─────────────────────────────────────────────────────┐   │
+│   │                    🧠 LLM                            │   │
+│   │                                                      │   │
+│   │   LLM decides EVERYTHING:                           │   │
+│   │   • What type of question is this?                  │   │
+│   │   • Where to find the answer?                       │   │
+│   │   • How to respond?                                 │   │
+│   │                                                      │   │
+│   └─────────────────────────────────────────────────────┘   │
+│           │                                                 │
+│           ▼                                                 │
+│   USER GETS ANSWER                                          │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+
+API is just a delivery mechanism. Not the focus.
+```
 
 ---
 
 ## Phase Overview
 
 ```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                           DEVELOPMENT PHASES                                 │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                             │
-│  PHASE 1          PHASE 2          PHASE 3          PHASE 4                │
-│  Foundation       Compliance       Intelligence     Production             │
-│  ✅ COMPLETE      ◀── NEXT         Planned          Future                 │
-│                                                                             │
-│  ┌─────────┐      ┌─────────┐      ┌─────────┐      ┌─────────┐           │
-│  │ DuckDB  │      │ Tax     │      │ Cash    │      │ Web UI  │           │
-│  │ ChromaDB│      │ Rate    │      │ Flow    │      │ Reports │           │
-│  │ 3 Agents│──────│ Verify  │──────│ Predict │──────│ API     │           │
-│  │ Query   │      │ ITC     │      │ Vendor  │      │ Deploy  │           │
-│  │ Classify│      │ 43B(h)  │      │ Score   │      │         │           │
-│  │ Tests   │      │         │      │         │      │         │           │
-│  └─────────┘      └─────────┘      └─────────┘      └─────────┘           │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
+DONE ✅                DONE ✅                    NEXT
+   │                      │                        │
+   ▼                      ▼                        ▼
+┌──────────┐       ┌──────────┐       ┌──────────┐       ┌──────────┐
+│ Phase 1  │       │ Phase 1B │       │ Phase 2  │       │ Phase 3  │
+│          │       │          │       │          │       │          │
+│ LLM Core │──────▶│ API +    │──────▶│ Better   │──────▶│ Advanced │
+│          │       │ Delivery │       │ LLM      │       │ Features │
+│ DONE ✅  │       │ DONE ✅  │       │ NEXT     │       │ PLANNED  │
+└──────────┘       └──────────┘       └──────────┘       └──────────┘
 ```
 
 ---
 
-## Phase 1: Foundation ✅ COMPLETE
+## Phase 1: LLM Foundation ✅ COMPLETE
 
-### Summary
+**Goal:** Get the LLM brain working.
 
-| Metric | Target | Achieved |
-|--------|--------|----------|
-| Core Modules | 14 | ✅ 15 |
-| Reference Data Files | 3 | ✅ 6 |
-| Knowledge Chunks | 500+ | ✅ 1,276 |
-| Guardrails | 5 | ✅ 10 |
-| Agents | 3 | ✅ 3 |
-| Tests | 50+ | ✅ 121 |
-
-### What Was Built
-
-#### Core Infrastructure
-
-| File | Purpose | Status |
-|------|---------|--------|
-| `core/data_engine.py` | DuckDB integration - Excel as SQL | ✅ |
-| `core/knowledge.py` | ChromaDB RAG for legal documents | ✅ |
-| `core/reference_data.py` | CSV data loading (clean separation) | ✅ |
-| `core/query_classifier.py` | Routes queries to correct knowledge source | ✅ |
-| `core/guardrails.py` | Input validation, safety checks | ✅ |
-| `core/metrics.py` | Performance tracking | ✅ |
-| `core/schema.py` | Standard Data Model definitions | ✅ |
-| `core/mapper.py` | Header mapping logic | ✅ |
-
-#### Agents
-
-| File | Purpose | Status |
-|------|---------|--------|
-| `agents/discovery.py` | Scan files, map headers, create tables | ✅ |
-| `agents/compliance.py` | Tax compliance checking framework | ✅ |
-| `agents/strategist.py` | Strategic analysis framework | ✅ |
-
-#### Reference Data (db/)
-
-| Path | Contents | Records |
-|------|----------|---------|
-| `db/gst/slabs.csv` | Rate slab definitions | 4 |
-| `db/gst/goods_hsn.csv` | HSN codes with rates | 89 |
-| `db/gst/services_sac.csv` | SAC codes with rates | 50 |
-| `db/gst/blocked_itc.csv` | Section 17(5) items | 15 |
-| `db/msme/classification.csv` | MSME thresholds | 3 |
-| `db/india/state_codes.csv` | GST state codes | 38 |
-
-#### Test Suite
-
-| File | Tests | Coverage |
-|------|-------|----------|
-| `test_config.py` | 10 | Config paths, settings |
-| `test_reference_data.py` | 19 | CSV loading, lookups |
-| `test_guardrails.py` | 17 | All validations |
-| `test_query_classifier.py` | 20 | Query routing |
-| `test_data_engine.py` | 8 | DuckDB ops |
-| `test_knowledge.py` | 7 | ChromaDB search |
-| `test_agents.py` | 10 | Agent init |
-| `test_orchestration.py` | 10 | Router, workflow |
-| `test_integration.py` | 20 | End-to-end |
-| **Total** | **121** | |
-
-### Key Technical Achievements
-
-#### 1. Clean Separation of Concerns
-
-```
-config.py           → Paths, settings, prompts ONLY
-core/reference_data.py → Data loading, rate lookups
-```
-
-#### 2. Query Classification System
-
-```python
-"What is CGST?"        → DEFINITION    → LLM general knowledge
-"GST rate on milk?"    → RATE_LOOKUP   → CSV lookup
-"Due date for GSTR-3B" → LEGAL_RULE    → ChromaDB RAG
-"My total sales"       → DATA_QUERY    → DuckDB
-```
-
-#### 3. Production-Grade db/ Structure
-
-```
-db/
-├── gst/              # All GST-related data
-│   ├── slabs.csv
-│   ├── goods_hsn.csv
-│   ├── services_sac.csv
-│   └── blocked_itc.csv
-├── msme/             # MSME classification
-│   └── classification.csv
-└── india/            # India-specific
-    └── state_codes.csv
-```
-
-#### 4. Guardrails (10 Methods)
-
-```python
-# Input validation
-validate_gstin()           # GSTIN format check
-validate_hsn_code()        # HSN format (4/6/8 digits)
-validate_invoice_number()  # Invoice format
-validate_date()            # Date validity
-validate_amount()          # Amount bounds
-
-# Business rules
-validate_tax_calculation() # taxable + taxes = total
-validate_itc_time_limit()  # Section 16(4)
-validate_section_43b_h()   # 45-day MSME payment
-
-# LLM safety
-validate_llm_response_no_math()       # No arithmetic
-validate_llm_response_has_citation()  # Sources required
-```
+| Component | What | Status |
+|-----------|------|--------|
+| `llm/client.py` | Ollama connection | ✅ |
+| `orchestration/workflow.py` | LLM routing logic | ✅ |
+| `orchestration/router.py` | Intent classification | ✅ |
+| `core/data_engine.py` | DuckDB for data | ✅ |
+| `core/knowledge.py` | ChromaDB for rules | ✅ |
+| `core/reference_data.py` | CSV lookups | ✅ |
+| `core/customer.py` | Customer isolation | ✅ |
+| `core/data_state.py` | Smart file detection | ✅ |
+| 3 Agents | Discovery, Compliance, Strategist | ✅ |
+| Tests | 166 passing | ✅ |
 
 ---
 
-## Phase 1B: API + Authentication (IMMEDIATE NEXT)
+## Phase 1B: Delivery Layer ✅ COMPLETE
 
-### Why This is Critical
-
-**Current Problem:** The CLI shows ALL companies to ANY user running it.
-This is a **security flaw** — we cannot ship this to customers.
-
-### Product Model (Like OpenAI API)
-
-- **We provide:** REST API endpoints
-- **Customers use:** Their own apps/scripts to call our API
-- **No customer-facing UI** — API only (like OpenAI, Stripe, Twilio)
-
-### Goals
-
-| Feature | Priority | For Whom | Description |
-|---------|----------|----------|-------------|
-| **FastAPI Backend** | P0 | Customers | REST API (the product) |
-| **API Key Authentication** | P0 | Customers | Secure access per customer |
-| **File Upload Endpoint** | P0 | Customers | Upload Excel/CSV via API |
-| **Query Endpoint** | P0 | Customers | Natural language queries |
-| **Streamlit Admin** | P1 | Us (internal) | Testing & debugging tool |
-| **Remove CLI Company List** | P0 | Security | Fix vulnerability |
+**Goal:** Wrap the LLM in an API so customers can use it.
 
 ### Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                                                                         │
-│   CUSTOMERS (External)                    US (Internal)                 │
-│                                                                         │
-│   ┌─────────────────┐                    ┌─────────────────┐           │
-│   │  Their App/Code │                    │   Streamlit     │           │
-│   │  (Python, JS,   │                    │   (Testing &    │           │
-│   │   Postman, etc) │                    │    Admin)       │           │
-│   └────────┬────────┘                    └────────┬────────┘           │
-│            │                                      │                     │
-│            │ API Calls                            │ Internal Only       │
-│            ▼                                      ▼                     │
-│   ┌─────────────────────────────────────────────────────────┐         │
-│   │                     FASTAPI BACKEND                      │         │
-│   │                    (THE PRODUCT)                         │         │
-│   │                                                          │         │
-│   │   POST /api/v1/upload      → Upload Excel/CSV           │         │
-│   │   POST /api/v1/query       → Natural language query     │         │
-│   │   GET  /api/v1/compliance  → Run compliance check       │         │
-│   │   GET  /api/v1/data/tables → List customer's tables     │         │
-│   └─────────────────────────────────────────────────────────┘         │
-│                              │                                          │
-│                              ▼                                          │
-│   ┌─────────────────────────────────────────────────────────┐         │
-│   │                  CUSTOMER DATA ISOLATION                 │         │
-│   │                                                          │         │
-│   │   workspace/{customer_api_key}/                          │         │
-│   │   ├── data/              # Their uploaded files          │         │
-│   │   ├── customer.duckdb    # Their database                │         │
-│   │   └── data_state.json    # File tracking                 │         │
-│   └─────────────────────────────────────────────────────────┘         │
-│                                                                         │
-└─────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│                                                             │
+│  CUSTOMERS                           US (Internal)          │
+│  ┌──────────────┐                   ┌──────────────┐       │
+│  │ Their Apps   │                   │  Streamlit   │       │
+│  │ Python/JS    │                   │  Admin UI    │       │
+│  └──────┬───────┘                   └──────┬───────┘       │
+│         │                                  │               │
+│         ▼                                  ▼               │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │                  FASTAPI                             │   │
+│  │                                                      │   │
+│  │   POST /api/v1/upload  ─── Upload Excel/CSV         │   │
+│  │   POST /api/v1/query   ─── Ask anything (LLM)       │   │
+│  │                                                      │   │
+│  └─────────────────────────────────────────────────────┘   │
+│         │                                                   │
+│         ▼                                                   │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │                    🧠 LLM                            │   │
+│  │              (The actual product)                    │   │
+│  └─────────────────────────────────────────────────────┘   │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-### Customer Authentication
+### What Was Built
 
-```python
-# API Key format (like OpenAI, Stripe)
-# lm_live_sk_xxxxxxxxxxxxxxxxxxxxx  (production)
-# lm_test_sk_xxxxxxxxxxxxxxxxxxxxx  (testing)
+| File | Purpose | Status |
+|------|---------|--------|
+| `api/app.py` | FastAPI application | ✅ |
+| `api/auth.py` | API key authentication | ✅ |
+| `api/models.py` | Request/Response schemas | ✅ |
+| `api/routes/upload.py` | File upload endpoint | ✅ |
+| `api/routes/query.py` | Single query endpoint | ✅ |
+| `streamlit/app.py` | Streamlit UI (internal) | ✅ |
+| `streamlit/api_keys.py` | API key management | ✅ |
 
-# Customer model
-class Customer:
-    customer_id: str      # "cust_abc123"
-    email: str            # "user@company.com"
-    api_key_hash: str     # Hashed API key
-    created_at: datetime
-    data_path: Path       # workspace/{customer_id}/
-```
+### API Design (Minimal)
 
-### API Endpoints (The Product)
-
-```python
-# All endpoints require: Authorization: Bearer lm_live_sk_xxxxx
-
-# Data Operations
-POST /api/v1/upload                  # Upload Excel/CSV file
-GET  /api/v1/data/tables             # List customer's tables
-POST /api/v1/data/query              # Natural language query
-
-# GST Knowledge (shared, read-only)
-POST /api/v1/knowledge/query         # GST rules Q&A
-
-# Compliance
-GET  /api/v1/compliance/check        # Run audit on customer's data
-GET  /api/v1/compliance/report       # Get detailed report
-```
-
-### How Customers Use Our API
-
-```python
-# Customer's Python code
-import requests
-
-API_KEY = "lm_live_sk_xxxxx"  # Their unique key
-BASE_URL = "https://api.ledgermind.com"  # or localhost:8000
-
-# 1. Upload their Excel file
-with open("sales_register.xlsx", "rb") as f:
-    response = requests.post(
-        f"{BASE_URL}/api/v1/upload",
-        headers={"Authorization": f"Bearer {API_KEY}"},
-        files={"file": f}
-    )
-print(response.json())  # {"status": "success", "table": "sales_register_2025"}
-
-# 2. Query their data (natural language)
-response = requests.post(
-    f"{BASE_URL}/api/v1/data/query",
-    headers={"Authorization": f"Bearer {API_KEY}"},
-    json={"query": "What is my total sales for November?"}
-)
-print(response.json())  # {"answer": "Your total sales for November: ₹12,45,000"}
-
-# 3. Ask about GST rules
-response = requests.post(
-    f"{BASE_URL}/api/v1/knowledge/query",
-    headers={"Authorization": f"Bearer {API_KEY}"},
-    json={"query": "When should I file GSTR-3B?"}
-)
-print(response.json())  # {"answer": "GSTR-3B due date is 20th of next month..."}
-
-# 4. Run compliance check
-response = requests.get(
-    f"{BASE_URL}/api/v1/compliance/check",
-    headers={"Authorization": f"Bearer {API_KEY}"}
-)
-print(response.json())  # {"issues": [...], "summary": "2 warnings found"}
-```
-
-### Streamlit Admin (Internal Tool - NOT for Customers)
+**Only 2 endpoints:**
 
 ```
-Purpose: For us (developers) to test and debug
-- Test API endpoints manually
-- View customer data for support
-- Monitor system health
-- Debug issues
-- NOT exposed to customers
+POST /api/v1/upload
+  - Upload Excel/CSV files
+  - Returns: { tables_created: [...] }
+
+POST /api/v1/query
+  - Ask anything
+  - LLM decides how to handle
+  - Returns: { answer: "..." }
 ```
 
-### File Structure (New)
-
-```
-ledgermind/
-├── api/                         # NEW: FastAPI backend (THE PRODUCT)
-│   ├── __init__.py
-│   ├── main.py                  # FastAPI app entry point
-│   ├── routes/
-│   │   ├── upload.py            # POST /api/v1/upload
-│   │   ├── data.py              # POST /api/v1/data/query
-│   │   ├── knowledge.py         # POST /api/v1/knowledge/query
-│   │   └── compliance.py        # GET /api/v1/compliance/check
-│   ├── models/
-│   │   ├── customer.py          # Customer model
-│   │   └── schemas.py           # Request/response schemas
-│   └── middleware/
-│       └── auth.py              # API key validation
-│
-├── admin/                       # NEW: Internal tools (NOT for customers)
-│   ├── streamlit_app.py         # Admin UI for testing/debugging
-│   └── scripts/
-│       ├── create_api_key.py    # Generate customer API keys
-│       └── view_customer.py     # Debug customer data
-│
-├── core/
-│   └── api_keys.py              # NEW: API key management
-```
-
-### Implementation Steps
-
-1. **Create FastAPI backend** (`api/main.py`)
-2. **Add API key authentication** (`api/middleware/auth.py`)
-3. **Create upload endpoint** (`api/routes/upload.py`)
-4. **Create query endpoint** (`api/routes/data.py`)
-5. **Create internal admin tool** (`admin/streamlit_app.py`)
-6. **Remove CLI company selection** (security fix)
-7. **Create API key generation script** (`admin/scripts/create_api_key.py`)
-
-### Future: Google Sheets Integration (Phase 2+)
-
-```
-Customer's Google Sheet
-        │
-        │ Webhook on change
-        ▼
-┌─────────────────┐
-│ POST /api/v1/   │
-│ sync/sheets     │
-└────────┬────────┘
-         │
-         ▼
-Auto-refresh customer's DuckDB
-```
+**Why so simple?**
+- The LLM handles all routing internally
+- No need for `/data/query` vs `/knowledge/query`
+- One endpoint = simpler for customers
 
 ---
 
-## Phase 2: Compliance Engine
+## Phase 2: Better LLM ◀── NEXT
 
-### Goals
+**Goal:** Improve LLM accuracy, especially for SQL.
 
-Build the actual compliance checking logic that makes LedgerMind valuable.
+| Feature | Description | Priority |
+|---------|-------------|----------|
+| **SQL Model** | Use `sqlcoder` for data queries | P0 |
+| **Query Templates** | Few-shot examples for common queries | P1 |
+| **Error Recovery** | Auto-fix failed SQL queries | P1 |
+| **Caching** | Cache frequent queries | P2 |
 
-| Feature | Description | Business Value |
-|---------|-------------|----------------|
-| Tax Rate Verification | Compare charged vs correct rate | Find overpaid GST |
-| Section 43B(h) Monitoring | Track MSME payment deadlines | Avoid disallowed deductions |
-| Section 17(5) Detection | Flag blocked ITC claims | Prevent reversals |
-| ITC Reconciliation | Match with GSTR-2A/2B | Ensure claimable credits |
-| Compliance Report | Actionable audit summary | One-click audit prep |
-| **Specialized SQL Model** | Use `sqlcoder` for Text-to-SQL | Better query accuracy |
+### SQL Accuracy Problem
 
-### Note on SQL Model
+Current: General LLM (qwen2.5) generates SQL
+- Works ~70% of the time
+- Fails on complex joins, date filtering
 
-Currently using `qwen2.5:7b-instruct` (general-purpose) for SQL generation. 
-Phase 2 will add specialized model selection:
-- `sqlcoder` or `defog/sqlcoder-7b` for SQL generation
-- Keep `qwen2.5:7b-instruct` for knowledge queries
-
-### Technical Milestones
-
-#### 2.1 Tax Rate Verification
-
-```python
-def check_tax_rates(self) -> List[ComplianceIssue]:
-    """Compare charged GST rate against correct rate from db/."""
-    
-    transactions = self.data_engine.query("""
-        SELECT * FROM sdm_sales_register
-        WHERE hsn_code IS NOT NULL
-    """)
-    
-    issues = []
-    for txn in transactions:
-        correct_rate = get_rate_for_hsn(txn.hsn_code)
-        if correct_rate and txn.gst_rate != correct_rate['rate']:
-            issues.append(ComplianceIssue(
-                issue_type="tax_rate_mismatch",
-                severity="warning",
-                description=f"HSN {txn.hsn_code}: Charged {txn.gst_rate}%, correct is {correct_rate['rate']}%",
-                amount_impact=(txn.gst_rate - correct_rate['rate']) / 100 * txn.taxable_value
-            ))
-    
-    return issues
-```
-
-#### 2.2 Section 43B(h) Monitoring
-
-```python
-def check_section_43b_h(self) -> List[ComplianceIssue]:
-    """Flag payments to MSMEs overdue by >45 days."""
-    
-    purchases = self.data_engine.query("""
-        SELECT vendor_name, vendor_gstin, invoice_date, total_value, payment_date
-        FROM sdm_purchase_ledger
-    """)
-    
-    issues = []
-    for purchase in purchases:
-        if is_msme_vendor(purchase.vendor_gstin):
-            days_since = (date.today() - purchase.invoice_date).days
-            if days_since > 45 and not purchase.payment_date:
-                issues.append(ComplianceIssue(
-                    issue_type="section_43b_h",
-                    severity="critical",
-                    description=f"Payment to {purchase.vendor_name} overdue by {days_since - 45} days",
-                    amount_impact=purchase.total_value,
-                    recommendation="Pay within 45 days to claim expense deduction"
-                ))
-    
-    return issues
-```
-
-### Deliverables
-
-- [ ] `check_tax_rates()` fully implemented
-- [ ] `check_section_43b_h()` with MSME verification
-- [ ] `check_blocked_credits()` with 15 blocked categories
-- [ ] Compliance report generation
-- [ ] Integration tests with sample data
+Phase 2: Specialized SQL model
+- `sqlcoder` or `defog/sqlcoder-7b`
+- Pre-trained on Text-to-SQL
+- Expected: 90%+ accuracy
 
 ---
 
-## Phase 3: Strategic Intelligence
+## Phase 3: Advanced Features
 
-### Goals
+**Goal:** Add value beyond basic Q&A.
 
 | Feature | Description |
 |---------|-------------|
-| Vendor Scoring | Reliability score based on payment history |
-| MSME Verification | Check if vendor is MSME for 43B(h) |
-| Cash Flow Forecast | Predict next 3 months |
-| Profit Analysis | Margin by product/customer |
-
-### Technical Details
-
-```python
-@dataclass
-class VendorScore:
-    vendor_name: str
-    gstin: str
-    total_transactions: int
-    total_value: float
-    avg_payment_days: float
-    is_msme: bool
-    reliability_score: float  # 0-100
-```
+| **ITC Reconciliation** | Match with GSTR-2B |
+| **43B(h) Alerts** | MSME payment warnings |
+| **Cash Flow Forecast** | Predict upcoming needs |
+| **Vendor Scoring** | Reliability rankings |
+| **PDF Reports** | Export compliance reports |
+| **Google Sheets Sync** | Auto-import data |
 
 ---
 
-## Phase 4: Production
+## Running The Project
 
-### Goals
-
-| Feature | Description |
-|---------|-------------|
-| Web UI | FastAPI + Modern frontend |
-| Reports | PDF/Excel export |
-| API | REST endpoints for integration |
-| Multi-company | Separate workspaces |
-
----
-
-## Success Criteria
-
-### Phase 1 ✅ (Complete)
-
-- [x] Can load any Excel/CSV folder
-- [x] Can query data with SQL
-- [x] Can answer GST questions (definitions, rates, rules)
-- [x] Query classifier routes to correct source
-- [x] Guardrails validate inputs
-- [x] CLI works end-to-end
-- [x] 121 tests passing
-- [x] Clean code structure (config vs reference_data)
-- [x] Production-grade db/ folder organization
-
-### Phase 2 (Next)
-
-- [ ] Identifies 90%+ of tax rate mismatches
-- [ ] Catches all Section 17(5) blocked credits
-- [ ] Tracks 43B(h) compliance accurately
-- [ ] Generates actionable compliance report
-
-### Phase 3 (Planned)
-
-- [ ] Vendor scores correlate with behavior
-- [ ] Cash flow forecast within 20% accuracy
-- [ ] Profit analysis matches manual calculation
-
-### Phase 4 (Future)
-
-- [ ] Web UI loads in < 2s
-- [ ] Reports generate in < 10s
-- [ ] Zero data leaks (local only)
-
----
-
-## Immediate Next Steps
-
-### This Week (Phase 2 Start)
-
-1. **Implement `check_tax_rates()`**
-   - Load transactions from DuckDB
-   - Look up correct rate from `db/gst/goods_hsn.csv`
-   - Flag mismatches with amount impact
-
-2. **Implement `check_section_43b_h()`**
-   - Load purchases
-   - Calculate days since invoice
-   - Flag overdue MSME payments
-
-3. **Test with sample data**
-   - Run compliance check
-   - Verify issues detected
-   - Calculate savings/risk
-
-### Commands to Test
+### Start API (for customers)
 
 ```bash
-# Run all tests (should pass 121)
-pytest tests/ -v
+# Start Ollama
+ollama serve
 
-# Analyze sample data
-python main.py "analyze folder workspace/sample_company/"
+# Start API
+uvicorn api.app:app --port 8000
 
-# Run compliance check
-python main.py "run compliance check"
+# Create API key
+python -m admin.api_keys create company_name
 
-# Ask about rules
-python main.py "What is Section 43B(h)?"
+# API ready at http://localhost:8000/docs
+```
+
+### Start Streamlit UI (for testing)
+
+```bash
+streamlit run streamlit/app.py
+```
+
+### Use the API
+
+```bash
+# Upload
+curl -X POST -H "X-API-Key: YOUR_KEY" \
+  -F "files=@sales.xlsx" \
+  http://localhost:8000/api/v1/upload
+
+# Query
+curl -X POST -H "X-API-Key: YOUR_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"query": "What is my total sales?"}' \
+  http://localhost:8000/api/v1/query
 ```
 
 ---
 
-## Project Statistics
+## Key Decisions
 
-| Metric | Value |
-|--------|-------|
-| **Python Files** | 25+ |
-| **Lines of Code** | ~5,000 |
-| **Tests** | 121 |
-| **CSV Data Files** | 6 |
-| **Reference Data Records** | 200+ |
-| **ChromaDB Chunks** | 1,276 |
+### Why 2 Endpoints Only?
+
+The LLM already routes queries internally via `IntentRouter`:
+- Data question → DuckDB
+- Knowledge question → ChromaDB
+- Compliance → Agents
+
+Exposing multiple endpoints just duplicates this logic. One endpoint = simpler API.
+
+### Why No Customer UI?
+
+We're API-only (like OpenAI, Stripe):
+- Customers build their own UI
+- Or integrate via code
+- Less to maintain
+
+Streamlit is internal for our testing.
+
+### Why Local LLM?
+
+- Customer data stays private
+- No API costs
+- Works offline
+- Full control
 
 ---
 
-## Resources
+## File Reference
 
-### Documentation
-- [ARCHITECTURE.md](./ARCHITECTURE.md) - Technical architecture
-- [README.md](../README.md) - Project overview
-- [db/README.md](../db/README.md) - Reference data documentation
+```
+api/
+├── app.py           # FastAPI entry point
+├── auth.py          # API key validation
+├── models.py        # QueryRequest, QueryResponse
+└── routes/
+    ├── upload.py    # POST /upload
+    └── query.py     # POST /query
 
-### External References
-- [CBIC GST Portal](https://cbic-gst.gov.in/)
-- [GST Notifications](https://www.gst.gov.in/)
-- [DuckDB Docs](https://duckdb.org/docs/)
-- [ChromaDB Docs](https://docs.trychroma.com/)
+streamlit/
+├── app.py           # Streamlit UI
+└── api_keys.py      # Key management CLI
+```
 
 ---
 
-*Last Updated: January 2026*
+**Remember: The LLM is the product. API is just plumbing.**

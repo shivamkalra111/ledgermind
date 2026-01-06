@@ -1,618 +1,284 @@
-# LedgerMind - Technical Architecture
+# LedgerMind Architecture
 
-> Complete technical documentation for the Agentic AI CFO Platform
-
-**Last Updated:** January 2026  
-**Phase:** 1 (Foundation) ✅ Complete  
-**Tests:** 166 Passing
+> The LLM is the product. Everything else is plumbing.
 
 ---
 
-## 1. System Overview
-
-LedgerMind is an **autonomous financial intelligence platform** built on a multi-agent architecture. It transforms unstructured financial data (Excel/CSV) into actionable insights through specialized AI agents.
-
-### Core Principles
-
-1. **Agents over Chatbots** — Autonomous task execution, not just Q&A
-2. **SQL over Embeddings for Data** — DuckDB for financial data, ChromaDB for rules only
-3. **Local-First** — All processing on user's machine, $0 cloud cost
-4. **Math Safety** — LLM reasons, Python/SQL calculates
-5. **Proper Knowledge Routing** — Each knowledge layer serves its purpose
-6. **Clean Separation** — Config for settings, reference_data for loading
-7. **Customer Isolation** — Each customer's data is completely isolated
-8. **Smart Data Loading** — Auto-detect file changes, only reload what's needed
-
----
-
-## 2. Knowledge Architecture
-
-### The Three Knowledge Layers
+## Core Principle
 
 ```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                     KNOWLEDGE ARCHITECTURE                              │
-├─────────────────────────────────────────────────────────────────────────┤
-│                                                                         │
-│  LAYER 1: REFERENCE DATA (Facts that change with policy)               │
-│  ─────────────────────────────────────────────────────                 │
-│  Source: db/**/*.csv                                                    │
-│  Purpose: Rate lookups, code validation, thresholds                    │
-│  Examples: GST rates, MSME limits, state codes                         │
-│                                                                         │
-│  → Queried via: core/reference_data.py                                 │
-│                                                                         │
-├─────────────────────────────────────────────────────────────────────────┤
-│                                                                         │
-│  LAYER 2: LEGAL KNOWLEDGE (Rules, procedures, sections)                │
-│  ───────────────────────────────────────────────────────               │
-│  Source: ChromaDB (from PDFs in knowledge/)                            │
-│  Purpose: RAG for specific legal questions                             │
-│  Examples: CGST Act, Rules, Notifications                              │
-│                                                                         │
-│  → Queried via: core/knowledge.py                                      │
-│                                                                         │
-├─────────────────────────────────────────────────────────────────────────┤
-│                                                                         │
-│  LAYER 3: FOUNDATIONAL KNOWLEDGE (What the LLM already knows)          │
-│  ────────────────────────────────────────────────────────              │
-│  Source: LLM training data                                              │
-│  Purpose: Definitions, concepts, explanations                          │
-│  Examples: "What is CGST?", "How does ITC work?"                       │
-│                                                                         │
-│  → Queried via: LLM without context restriction                        │
-│                                                                         │
-└─────────────────────────────────────────────────────────────────────────┘
-```
-
-### Query Classification & Routing
-
-```
-User Question
-     │
-     ▼
-┌────────────────────────────────────────────────────────────┐
-│              QUERY CLASSIFIER                              │
-│              (core/query_classifier.py)                    │
-├────────────────────────────────────────────────────────────┤
-│                                                            │
-│  "What is CGST?"        → DEFINITION    → LLM (Layer 3)   │
-│  "GST rate on milk?"    → RATE_LOOKUP   → CSV (Layer 1)   │
-│  "Due date for GSTR-3B" → LEGAL_RULE    → ChromaDB (L2)   │
-│  "My total sales?"      → DATA_QUERY    → DuckDB          │
-│                                                            │
-└────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│                                                             │
+│   Question ──▶ LLM ──▶ Answer                              │
+│                                                             │
+│   That's it. Everything else supports this flow.           │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 3. High-Level Architecture
+## System Overview
 
 ```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                              USER INTERFACE                                  │
-│                         (CLI / Future: Web UI)                              │
-│                              main.py                                        │
-└─────────────────────────────────────────────────────────────────────────────┘
-                                      │
-                                      ▼
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                           ORCHESTRATION LAYER                                │
-│  ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐         │
-│  │  Intent Router  │───▶│ Query Classifier│───▶│  Agent Workflow │         │
-│  │   (router.py)   │    │  (classifier.py)│    │  (workflow.py)  │         │
-│  └─────────────────┘    └─────────────────┘    └─────────────────┘         │
-└─────────────────────────────────────────────────────────────────────────────┘
-                                      │
-                    ┌─────────────────┼─────────────────┐
-                    ▼                 ▼                 ▼
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                              AGENT LAYER                                     │
-│  ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐         │
-│  │   DISCOVERY     │    │   COMPLIANCE    │    │   STRATEGIST    │         │
-│  │   (discovery.py)│    │  (compliance.py)│    │  (strategist.py)│         │
-│  │                 │    │                 │    │                 │         │
-│  │ • File scanning │    │ • Tax rate      │    │ • Vendor        │         │
-│  │ • Header map    │    │   verification  │    │   analysis      │         │
-│  │ • Schema create │    │ • ITC checks    │    │ • Cash flow     │         │
-│  │ • Type detect   │    │ • 43B(h) check  │    │ • Forecasting   │         │
-│  └─────────────────┘    └─────────────────┘    └─────────────────┘         │
-└─────────────────────────────────────────────────────────────────────────────┘
-                                      │
-                    ┌─────────────────┼─────────────────┐
-                    ▼                 ▼                 ▼
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                              CORE LAYER                                      │
-│  ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐         │
-│  │   DATA ENGINE   │    │  KNOWLEDGE BASE │    │   LLM CLIENT    │         │
-│  │  (data_engine)  │    │  (knowledge.py) │    │   (client.py)   │         │
-│  │                 │    │                 │    │                 │         │
-│  │ • DuckDB        │    │ • ChromaDB      │    │ • Ollama        │         │
-│  │ • Excel → SQL   │    │ • RAG retrieval │    │ • Qwen 7B       │         │
-│  │ • Query engine  │    │ • PDF ingestion │    │ • JSON mode     │         │
-│  └─────────────────┘    └─────────────────┘    └─────────────────┘         │
-│                                                                             │
-│  ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐         │
-│  │ REFERENCE DATA  │    │   GUARDRAILS    │    │    METRICS      │         │
-│  │(reference_data) │    │ (guardrails.py) │    │  (metrics.py)   │         │
-│  │                 │    │                 │    │                 │         │
-│  │ • Load CSV      │    │ • GSTIN check   │    │ • Performance   │         │
-│  │ • Rate lookup   │    │ • Tax math      │    │ • Compliance    │         │
-│  │ • MSME limits   │    │ • LLM safety    │    │ • Tracking      │         │
-│  └─────────────────┘    └─────────────────┘    └─────────────────┘         │
-└─────────────────────────────────────────────────────────────────────────────┘
-                                      │
-                    ┌─────────────────┼─────────────────┐
-                    ▼                 ▼                 ▼
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                              DATA LAYER                                      │
-│  ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐         │
-│  │    db/          │    │   knowledge/    │    │   workspace/    │         │
-│  │ (Reference Data)│    │ (PDFs for RAG)  │    │ (User's Data)   │         │
-│  │                 │    │                 │    │                 │         │
-│  │ db/gst/         │    │ • CGST Act PDF  │    │ • Excel files   │         │
-│  │ db/msme/        │    │ • CGST Rules    │    │ • CSV files     │         │
-│  │ db/india/       │    │ • Accounting    │    │ • Discovery     │         │
-│  │                 │    │   standards     │    │   metadata      │         │
-│  └─────────────────┘    └─────────────────┘    └─────────────────┘         │
-└─────────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────┐
+│                         LEDGERMIND                                   │
+│                                                                      │
+│  ┌─────────────────────────────────────────────────────────────┐    │
+│  │                    DELIVERY LAYER                            │    │
+│  │                    (thin wrappers)                           │    │
+│  │                                                              │    │
+│  │   ┌──────────────┐              ┌──────────────┐            │    │
+│  │   │   FastAPI    │              │  Streamlit   │            │    │
+│  │   │  (customers) │              │  (internal)  │            │    │
+│  │   └──────┬───────┘              └──────┬───────┘            │    │
+│  │          │                             │                     │    │
+│  └──────────┼─────────────────────────────┼─────────────────────┘    │
+│             │                             │                          │
+│             └──────────────┬──────────────┘                          │
+│                            │                                         │
+│                            ▼                                         │
+│  ┌─────────────────────────────────────────────────────────────┐    │
+│  │                      LLM BRAIN                               │    │
+│  │                                                              │    │
+│  │   ┌──────────────────────────────────────────────────────┐  │    │
+│  │   │              AgentWorkflow                            │  │    │
+│  │   │              (orchestration/workflow.py)              │  │    │
+│  │   │                                                       │  │    │
+│  │   │   IntentRouter ──▶ Route to handler ──▶ Response     │  │    │
+│  │   └──────────────────────────────────────────────────────┘  │    │
+│  │                            │                                 │    │
+│  └────────────────────────────┼─────────────────────────────────┘    │
+│                               │                                      │
+│             ┌─────────────────┼─────────────────┐                    │
+│             │                 │                 │                    │
+│             ▼                 ▼                 ▼                    │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐               │
+│  │   DuckDB     │  │   ChromaDB   │  │   CSV Files  │               │
+│  │  (customer   │  │  (GST rules) │  │  (rates)     │               │
+│  │   data)      │  │              │  │              │               │
+│  └──────────────┘  └──────────────┘  └──────────────┘               │
+│                                                                      │
+└─────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 4. Complete File Structure
+## Component Details
+
+### 1. Delivery Layer (Thin)
+
+**FastAPI** (`api/`)
+- 2 endpoints only: `/upload`, `/query`
+- API key authentication
+- Just calls `workflow.run()`
+
+**Streamlit** (`streamlit/`)
+- Internal testing tool
+- Chat interface
+- Customer selection
+
+### 2. LLM Brain
+
+**AgentWorkflow** (`orchestration/workflow.py`)
+- The main orchestrator
+- Routes all queries
+- Calls appropriate handlers
+
+**IntentRouter** (`orchestration/router.py`)
+- Classifies user intent
+- Pattern matching + LLM fallback
+
+**LLMClient** (`llm/client.py`)
+- Ollama connection
+- Text generation
+
+### 3. Data Sources
+
+**DuckDB** (`core/data_engine.py`)
+- Customer's Excel/CSV as SQL tables
+- Fast analytical queries
+
+**ChromaDB** (`core/knowledge.py`)
+- Vector database
+- GST rules from PDFs
+- RAG retrieval
+
+**CSV Files** (`core/reference_data.py`)
+- Tax rates
+- HSN/SAC codes
+- State codes
+
+---
+
+## Data Flow
+
+### Query Flow
 
 ```
-ledgermind/
-├── 🎯 main.py                      # Entry point - CLI interface
-├── ⚙️  config.py                    # Configuration ONLY (paths, settings)
-├── 📋 requirements.txt             # Python dependencies
+User: "What is my total sales?"
+          │
+          ▼
+    ┌───────────┐
+    │ API/CLI   │  Receives query
+    └─────┬─────┘
+          │
+          ▼
+    ┌───────────┐
+    │ Workflow  │  workflow.run(query)
+    └─────┬─────┘
+          │
+          ▼
+    ┌───────────┐
+    │ Router    │  Classifies: DATA_QUERY
+    └─────┬─────┘
+          │
+          ▼
+    ┌───────────┐
+    │ Handler   │  _handle_data_query()
+    └─────┬─────┘
+          │
+          ├──▶ Get table schemas from DuckDB
+          │
+          ├──▶ LLM generates SQL
+          │
+          ├──▶ Execute SQL in DuckDB
+          │
+          ├──▶ LLM formats response
+          │
+          ▼
+    "Your total sales: ₹5,00,000"
+```
+
+### Knowledge Query Flow
+
+```
+User: "What is CGST?"
+          │
+          ▼
+    ┌───────────┐
+    │ Router    │  Classifies: KNOWLEDGE_QUERY
+    └─────┬─────┘
+          │
+          ▼
+    ┌───────────┐
+    │ Classifier│  Sub-classifies: DEFINITION
+    └─────┬─────┘
+          │
+          ▼
+    ┌───────────┐
+    │ LLM       │  General knowledge answer
+    └─────┬─────┘
+          │
+          ▼
+    "CGST is Central GST..."
+```
+
+---
+
+## Customer Isolation
+
+```
+workspace/
+├── customer_a/
+│   ├── data/           # Their Excel files
+│   ├── customer_a.duckdb
+│   └── profile.json
 │
-├── 🤖 agents/                      # AI Agents (business logic)
-│   ├── __init__.py
-│   ├── discovery.py                # File discovery & schema mapping
-│   ├── compliance.py               # Tax compliance checks
-│   └── strategist.py               # Strategic analysis
-│
-├── ⚙️  core/                        # Core infrastructure
-│   ├── __init__.py
-│   ├── data_engine.py              # DuckDB integration
-│   ├── knowledge.py                # ChromaDB RAG
-│   ├── reference_data.py           # CSV data loading (Layer 1)
-│   ├── query_classifier.py         # Query routing
-│   ├── guardrails.py               # Safety validations
-│   ├── metrics.py                  # Performance tracking
-│   ├── schema.py                   # Data models (SDM)
-│   └── mapper.py                   # Header mapping logic
-│
-├── 🔀 orchestration/               # Workflow control
-│   ├── __init__.py
-│   ├── router.py                   # Intent classification
-│   └── workflow.py                 # Agent coordination
-│
-├── 🧠 llm/                         # LLM integration
-│   ├── __init__.py
-│   └── client.py                   # Ollama client
-│
-├── 📊 db/                          # Reference data (Layer 1) - CSVs ONLY
-│   ├── README.md                   # Data documentation
-│   ├── gst/                        # GST-related reference data
-│   │   ├── slabs.csv               # Rate slabs (0%, 5%, 18%, 28%)
-│   │   ├── goods_hsn.csv           # HSN → rate mapping (89 items)
-│   │   ├── services_sac.csv        # SAC → rate mapping (50 services)
-│   │   └── blocked_itc.csv         # Section 17(5) items (15)
-│   ├── msme/                       # MSME classification
-│   │   └── classification.csv      # Micro/Small/Medium thresholds
-│   └── india/                      # India-specific data
-│       └── state_codes.csv         # GST state codes (38)
-│
-├── 📚 knowledge/                   # PDFs for RAG (Layer 2)
-│   ├── gst/
-│   │   ├── a2017-12.pdf            # CGST Act 2017
-│   │   └── 01062021-cgst-rules...  # CGST Rules
-│   └── accounting/                 # Accounting standards
-│
-├── 📂 workspace/                   # User data
-│   └── sample_company/             # Sample test data
-│
-├── 🧪 tests/                       # Test suite (121 tests)
-│   ├── __init__.py
-│   ├── conftest.py                 # Shared fixtures
-│   ├── test_config.py              # Config path tests
-│   ├── test_reference_data.py      # Data loading tests
-│   ├── test_guardrails.py          # Validation tests
-│   ├── test_query_classifier.py    # Query routing tests
-│   ├── test_data_engine.py         # DuckDB tests
-│   ├── test_knowledge.py           # ChromaDB tests
-│   ├── test_agents.py              # Agent tests
-│   ├── test_orchestration.py       # Workflow tests
-│   └── test_integration.py         # End-to-end tests
-│
-├── 🔧 scripts/                     # Utility scripts
-│   ├── create_sample_data.py       # Generate test data
-│   ├── ingest_knowledge.py         # Populate ChromaDB
-│   └── scrape_gst_rates.py         # Update GST rates
-│
-├── 📖 docs/                        # Documentation
-│   ├── ARCHITECTURE.md             # This file
-│   └── ROADMAP.md                  # Development plan
-│
-├── 🗄️  chroma_db/                   # ChromaDB storage
-└── 🦆 ledgermind.duckdb            # DuckDB database
+├── customer_b/
+│   ├── data/           # Their Excel files
+│   ├── customer_b.duckdb
+│   └── profile.json
+```
+
+**Each API request is scoped to one customer.** No cross-customer access.
+
+---
+
+## Security Model
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                                                             │
+│   API Request                                               │
+│   X-API-Key: lm_live_xxxxx                                 │
+│         │                                                   │
+│         ▼                                                   │
+│   ┌───────────────┐                                        │
+│   │ auth.py       │  Validate key, get customer_id         │
+│   └───────┬───────┘                                        │
+│           │                                                 │
+│           ▼                                                 │
+│   ┌───────────────┐                                        │
+│   │ CustomerCtx   │  Load only this customer's data        │
+│   └───────┬───────┘                                        │
+│           │                                                 │
+│           ▼                                                 │
+│   Customer sees only their data                             │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 5. File Descriptions (What & Why)
+## Tech Stack
 
-### Entry Points
-
-| File | Purpose | Why It Exists |
-|------|---------|---------------|
-| `main.py` | CLI entry point | User interacts with system here |
-| `config.py` | Paths and settings ONLY | Single source for configuration |
-
-### Core Infrastructure (`core/`)
-
-| File | Purpose | Why It Exists |
-|------|---------|---------------|
-| `customer.py` | **Customer isolation** | **Multi-tenant data separation** |
-| `data_state.py` | **Smart file change detection** | **Only reload changed files** |
-| `data_engine.py` | DuckDB wrapper - Excel as SQL | Fast analytics on user's financial data |
-| `knowledge.py` | ChromaDB wrapper - RAG for rules | Legal questions need document search |
-| `reference_data.py` | Load CSV data, rate lookups | **Clean separation from config** |
-| `query_classifier.py` | Routes queries to correct source | Each knowledge layer serves its purpose |
-| `guardrails.py` | Validation & safety checks | Prevent bad data, LLM hallucinations |
-| `metrics.py` | Performance & compliance tracking | Monitor system health |
-| `schema.py` | Standard Data Model definitions | Normalize different Excel formats |
-| `mapper.py` | Header mapping logic | Map "Inv. No." → "invoice_number" |
-
-### Agents (`agents/`)
-
-| File | Purpose | Why It Exists |
-|------|---------|---------------|
-| `discovery.py` | Reads Excel/CSV, maps to standard schema | MSMEs have messy, inconsistent files |
-| `compliance.py` | Checks tax compliance issues | Core value - find savings/risks |
-| `strategist.py` | Vendor analysis, cash flow forecasting | Strategic business insights |
-
-### Reference Data (`db/`)
-
-| Path | Contents | Records |
-|------|----------|---------|
-| `db/gst/slabs.csv` | Rate slab definitions | 4 slabs |
-| `db/gst/goods_hsn.csv` | HSN codes → rates | 89 items |
-| `db/gst/services_sac.csv` | SAC codes → rates | 50 services |
-| `db/gst/blocked_itc.csv` | Section 17(5) list | 15 items |
-| `db/msme/classification.csv` | MSME thresholds | 3 categories |
-| `db/india/state_codes.csv` | GST state codes | 38 codes |
-
-### Tests (`tests/`)
-
-| File | Tests | What It Covers |
-|------|-------|----------------|
-| `test_config.py` | 10 | Paths exist, settings valid |
-| `test_reference_data.py` | 19 | CSV loading, rate lookups |
-| `test_guardrails.py` | 17 | GSTIN, HSN, tax validation |
-| `test_query_classifier.py` | 20 | Query routing accuracy |
-| `test_customer.py` | 23 | Customer isolation |
-| `test_data_state.py` | **22** | **Smart file loading** |
-| `test_data_engine.py` | 8 | DuckDB operations |
-| `test_knowledge.py` | 7 | ChromaDB search |
-| `test_agents.py` | 10 | Agent initialization |
-| `test_orchestration.py` | 10 | Router, workflow |
-| `test_integration.py` | 20 | End-to-end flows |
-| **Total** | **166** | |
+| Layer | Technology | Why |
+|-------|------------|-----|
+| **LLM** | Ollama + Qwen2.5 | Local, free, good quality |
+| **Data** | DuckDB | Fast SQL on files |
+| **Knowledge** | ChromaDB | Vector search for RAG |
+| **API** | FastAPI | Modern, fast, docs auto-gen |
+| **Admin UI** | Streamlit | Quick internal tool |
 
 ---
 
-## 6. Guardrails System
+## Key Design Decisions
 
-### Current Guardrails (10 Methods)
+### 1. LLM Handles Routing
 
-| Guardrail | What It Does | When Used |
-|-----------|--------------|-----------|
-| `validate_gstin` | Check GSTIN format & checksum | All transactions |
-| `validate_hsn_code` | Check HSN code format (4/6/8 digits) | Rate lookups |
-| `validate_invoice_number` | Check invoice format | Data ingestion |
-| `validate_date` | Check date validity | All date fields |
-| `validate_amount` | Check amount is positive, reasonable | All amounts |
-| `validate_tax_calculation` | Verify taxable + taxes = total | Tax fields |
-| `validate_itc_time_limit` | Check ITC not expired | ITC claims |
-| `validate_section_43b_h` | Check MSME payment deadline | Vendor payments |
-| `validate_llm_response_no_math` | Ensure LLM doesn't do arithmetic | LLM outputs |
-| `validate_llm_response_has_citation` | Check LLM cites sources | Legal answers |
+No hardcoded "if query contains sales, do X". The LLM classifies intent and routes appropriately.
 
----
+### 2. Single Query Endpoint
 
-## 7. Technology Stack
+The LLM already routes internally. Multiple endpoints would just duplicate this.
 
-| Layer | Technology | Purpose |
-|-------|------------|---------|
-| **LLM** | Qwen2.5-7B-Instruct | Reasoning, classification |
-| **LLM Host** | Ollama | Local inference, no cloud |
-| **Data Engine** | DuckDB | Excel/CSV as SQL, analytics |
-| **Vector DB** | ChromaDB | RAG for legal documents |
-| **Embeddings** | Default (ChromaDB) | Semantic search |
-| **Framework** | Python 3.10+ | Core language |
-| **CLI** | Rich | Beautiful terminal UI |
-| **Testing** | Pytest | 121 tests |
+### 3. Local First
+
+All computation happens locally:
+- LLM runs via Ollama
+- Data stays in local DuckDB
+- No cloud dependencies
+
+### 4. Customer Isolation Built-In
+
+Every query is scoped to a customer. Architecture prevents cross-customer access.
+
+### 5. Thin API Layer
+
+API just validates auth and calls `workflow.run()`. No business logic in routes.
 
 ---
 
-## 8. Dynamic Data Discovery
+## Extension Points
 
-### How Discovery Works
+### Add New Query Type
 
-**Every company's data is different.** Column names, file formats, and structures vary:
+1. Add `IntentType` in `router.py`
+2. Add handler in `workflow.py`
+3. Done. `/query` endpoint automatically supports it.
 
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                      DYNAMIC DISCOVERY PROCESS                               │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                             │
-│  COMPANY A's Excel:                 COMPANY B's Excel:                      │
-│  ┌─────────────────┐                ┌─────────────────┐                     │
-│  │ Inv No  │ Amt   │                │ Invoice Number  │ Total │             │
-│  │ C001    │ 1000  │                │ INV-2025-001    │ 5000  │             │
-│  └─────────────────┘                └─────────────────┘                     │
-│                                                                             │
-│                         │                     │                             │
-│                         ▼                     ▼                             │
-│                                                                             │
-│           ┌─────────────────────────────────────────┐                       │
-│           │        DISCOVERY AGENT (LLM)            │                       │
-│           │                                         │                       │
-│           │  "This looks like an invoice..."        │                       │
-│           │  "Inv No" → invoice_number              │                       │
-│           │  "Amt" → total_value                    │                       │
-│           │  "Invoice Number" → invoice_number      │                       │
-│           │  "Total" → total_value                  │                       │
-│           └─────────────────────────────────────────┘                       │
-│                                                                             │
-│                         │                     │                             │
-│                         ▼                     ▼                             │
-│                                                                             │
-│           ┌─────────────────────────────────────────┐                       │
-│           │       STANDARD DATA MODEL (SDM)         │                       │
-│           │  invoice_number │ total_value │ ...     │                       │
-│           │  C001           │ 1000        │         │                       │
-│           │  INV-2025-001   │ 5000        │         │                       │
-│           └─────────────────────────────────────────┘                       │
-│                                                                             │
-│  discovery_meta.json:                                                       │
-│  - Generated PER COMPANY based on THEIR file structure                      │
-│  - NOT a static template                                                    │
-│  - LLM analyzes headers and creates mappings dynamically                    │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
+### Add New Data Source
 
-### Why `discovery_meta.json` is Dynamic
+1. Create module in `core/`
+2. Call from handler in `workflow.py`
+3. No API changes needed.
 
-This file is **generated by the system**, NOT provided by customers:
+### Improve LLM Accuracy
 
-| Aspect | Description |
-|--------|-------------|
-| **When Created** | When user runs "analyze data" |
-| **What It Contains** | Mapping of customer's column names to SDM |
-| **Unique Per Customer** | Each company gets their own mappings |
-| **LLM-Powered** | AI understands arbitrary column names |
-
-```json
-// Company A's discovery_meta.json
-{
-  "sales.xlsx": {
-    "sheet_type": "sales_register",
-    "header_mapping": {
-      "Inv No": "invoice_number",      // Their naming
-      "Amt": "total_value"
-    }
-  }
-}
-
-// Company B's discovery_meta.json (completely different!)
-{
-  "invoices.csv": {
-    "sheet_type": "sales_register",
-    "header_mapping": {
-      "Invoice Number": "invoice_number",  // Their naming
-      "Grand Total": "total_value"
-    }
-  }
-}
-```
+1. Swap model in `config.py`
+2. Or add specialized model for SQL (Phase 2)
 
 ---
 
-## 9. Smart Data Loading
-
-### Auto-Detection System
-
-LedgerMind uses **hash-based change detection** to minimize reload time:
-
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                      SMART DATA LOADING                                      │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                             │
-│  On Startup:                                                                │
-│                                                                             │
-│  1. Read data_state.json (file hashes from last session)                    │
-│  2. Scan data/ folder for current files                                     │
-│  3. Compare:                                                                │
-│     - NEW files (hash not in state) → Load                                  │
-│     - MODIFIED files (hash changed) → Reload                                │
-│     - DELETED files (in state, not in folder) → Remove table                │
-│     - UNCHANGED files (hash matches) → Skip (instant!)                      │
-│  4. Update data_state.json                                                  │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
-
-### State File Structure
-
-```json
-// workspace/{customer}/data_state.json
-{
-  "customer_id": "acme_corp",
-  "last_scan": "2026-01-06T10:30:00",
-  "files": {
-    "sales_2025.xlsx": {
-      "filename": "sales_2025.xlsx",
-      "file_hash": "a1b2c3d4...",  // MD5 hash of contents
-      "file_size": 102400,
-      "modified_time": "2026-01-06T09:00:00",
-      "last_loaded": "2026-01-06T09:05:00",
-      "table_name": "sales_2025",
-      "row_count": 500
-    }
-  }
-}
-```
-
-### Benefits
-
-| Benefit | Description |
-|---------|-------------|
-| **Fast Startup** | Only reload changed files |
-| **No Manual Refresh** | System auto-detects changes |
-| **Data Integrity** | Hash-based, not timestamp-based |
-| **Audit Trail** | Know when each file was last loaded |
-
----
-
-## 10. Customer Isolation Architecture
-
-### Multi-Tenant Design
-
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                         CUSTOMER ISOLATION                                   │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                             │
-│  SHARED (Read-Only)                │  ISOLATED (Per Customer)              │
-│  ──────────────────                │  ────────────────────────             │
-│                                    │                                        │
-│  📚 knowledge/                     │  📂 workspace/                         │
-│     CGST Act, Rules                │     ├── acme_corp/                    │
-│     (Same for everyone)            │     │   ├── data/                     │
-│                                    │     │   │   └── *.xlsx, *.csv         │
-│  📊 db/                            │     │   ├── acme_corp.duckdb ←────────│
-│     GST rates, MSME limits         │     │   └── profile.json              │
-│     (Reference data)               │     │                                  │
-│                                    │     └── xyz_traders/                  │
-│  🗄️ chroma_db/                     │         ├── data/                     │
-│     Legal document vectors         │         ├── xyz_traders.duckdb       │
-│                                    │         └── profile.json              │
-│                                    │                                        │
-│                                    │  🔒 Each customer queries ONLY their  │
-│                                    │     own DuckDB file                   │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
-
-### Key Components
-
-| Component | Purpose |
-|-----------|---------|
-| `core/customer.py` | CustomerContext, CustomerManager |
-| `CustomerContext` | Manages one customer's workspace |
-| `CustomerManager` | List, create, delete customers |
-| `profile.json` | Customer metadata (name, GSTIN, type) |
-| `{id}.duckdb` | Customer's isolated database |
-
-### Isolation Guarantee
-
-```python
-# Each workflow is bound to one customer
-workflow = AgentWorkflow(customer=customer_context)
-
-# All queries are automatically scoped
-workflow.run("What are my total sales?")  # Only queries customer's data
-```
-
----
-
-## 11. Clean Code Principles
-
-### Config vs Reference Data
-
-**Before (Anti-pattern):**
-```python
-# config.py - BAD: Mixed concerns
-GST_SLABS = {"exempt": 0, "merit": 5}  # Hardcoded data
-def load_goods_rates(): ...            # Data loading logic
-```
-
-**After (Clean):**
-```python
-# config.py - GOOD: Only configuration
-GST_SLABS_FILE = DB_DIR / "gst" / "slabs.csv"
-
-# core/reference_data.py - GOOD: Data loading
-def load_gst_slabs() -> List[Dict]:
-    return _load_csv(GST_SLABS_FILE)
-```
-
-### System Prompt
-
-**Before (Anti-pattern):**
-```python
-SYSTEM_PROMPT = """...
-GST 2026 CONTEXT:
-- Slabs: 0%, 5%, 18%, 40%  # Hardcoded rates!
-"""
-```
-
-**After (Clean):**
-```python
-SYSTEM_PROMPT = """...
-For GST rates: Use the rate data provided in context (from our database).
-"""
-```
-
----
-
-## 12. Test Commands
-
-```bash
-# Run all tests
-pytest tests/ -v
-
-# Run specific module
-pytest tests/test_guardrails.py -v
-
-# Run with coverage
-pytest tests/ --cov=core --cov=agents
-
-# Quick smoke test
-python -c "
-from core.query_classifier import QueryClassifier
-c = QueryClassifier()
-print(c.classify('What is CGST?'))  # → definition, llm
-print(c.classify('GST rate on milk?'))  # → rate_lookup, csv
-"
-```
-
----
-
-## 13. Current Status
-
-### Phase 1 Complete ✅
-
-| Component | Status | Details |
-|-----------|--------|---------|
-| DuckDB Data Engine | ✅ | Connected |
-| ChromaDB Knowledge | ✅ | 1,276 chunks |
-| Query Classifier | ✅ | 4 types |
-| Guardrails | ✅ | 10 methods |
-| 3 Agents | ✅ | All working |
-| LLM Client | ✅ | Ollama connected |
-| Reference Data | ✅ | 6 CSV files |
-| **Customer Isolation** | ✅ | **Multi-tenant ready** |
-| **Smart Data Loading** | ✅ | **Auto-detect changes** |
-| Tests | ✅ | **166 passing** |
-
----
-
-*Last Updated: January 2026*
+**Everything serves one purpose: get the LLM to answer questions.**

@@ -1,369 +1,332 @@
-# LedgerMind Code Flow
+# Code Flow - How LedgerMind Works
 
-A step-by-step walkthrough of how the code executes from start to finish.
-
----
-
-## 1. Application Startup (`main.py`)
-
-```
-python main.py
-```
-
-### 1.1 Banner and System Check
-
-| Function | What it does |
-|----------|--------------|
-| `print_banner()` | Shows the LedgerMind ASCII logo |
-| `check_ollama()` | Verifies Ollama is running and model is available |
-
-### 1.2 Customer Selection
-
-| Function | What it does |
-|----------|--------------|
-| `CustomerManager()` | Initializes from `core/customer.py` - scans `workspace/` for existing customers |
-| `show_customer_list()` | Displays table of existing companies |
-| `select_customer()` | Prompts user to select, create new, or use demo |
-| `create_new_customer()` | Creates new customer folder and profile |
-
-**Files created per customer:**
-```
-workspace/{customer_id}/
-├── profile.json          # Company metadata
-├── data/                 # User's Excel/CSV files
-├── {customer_id}.duckdb  # Customer's database
-└── data_state.json       # File change tracking
-```
-
-### 1.3 Workflow Initialization
-
-| Function | What it does |
-|----------|--------------|
-| `AgentWorkflow(customer=customer)` | Main orchestrator from `orchestration/workflow.py` |
-| `customer.get_data_engine()` | Creates DuckDB connection for this customer |
-| `customer.get_data_state_manager()` | Loads file tracking state |
-| `workflow._smart_load_data()` | Detects new/modified files and loads them |
+> The LLM is the product. This doc shows how questions flow through it.
 
 ---
 
-## 2. User Query Processing
-
-When user types a question:
+## The Big Picture
 
 ```
-User types: "Show me the balance for November"
-```
-
-### 2.1 Intent Routing (`orchestration/router.py`)
-
-| Function | What it does |
-|----------|--------------|
-| `IntentRouter.route(user_input)` | Pattern matches to determine intent type |
-
-**Intent Types:**
-```
-FOLDER_ANALYSIS    → "analyze folder /path/"
-DATA_QUERY         → "show my balance", "total sales"
-KNOWLEDGE_QUERY    → "what is CGST?", "GST rate on milk?"
-COMPLIANCE_CHECK   → "run compliance check"
-STRATEGIC_ANALYSIS → "analyze vendors"
-HELP               → "help"
-```
-
-### 2.2 Handler Dispatch (`orchestration/workflow.py`)
-
-| Intent | Handler Function | Description |
-|--------|------------------|-------------|
-| DATA_QUERY | `_handle_data_query()` | Converts question to SQL, runs on DuckDB |
-| KNOWLEDGE_QUERY | `_handle_knowledge_query()` | Routes to LLM/CSV/ChromaDB |
-| COMPLIANCE_CHECK | `_handle_compliance_check()` | Runs `ComplianceAgent` |
-| FOLDER_ANALYSIS | `_handle_folder_analysis()` | Runs `DiscoveryAgent` |
-| STRATEGIC_ANALYSIS | `_handle_strategic_analysis()` | Runs `StrategistAgent` |
-
----
-
-## 3. Data Query Flow (Example)
-
-```
-User: "Show me the balance for November"
-```
-
-### Step 1: Classification
-```
-_handle_data_query(query)
-  └── _get_table_schemas(tables)    # Get column names from DuckDB
-```
-
-### Step 2: SQL Generation
-```
-LLMClient.generate(prompt)          # Ask LLM to write SQL
-  └── prompt includes:
-      - Table names and columns
-      - Sample data
-      - Rules for SQL generation
-```
-
-### Step 3: Execution
-```
-DataEngine.query(sql)               # Execute on DuckDB
-  └── Returns pandas DataFrame
-```
-
-### Step 4: Response
-```
-Format results as markdown table
-Return to user
+User Question
+     │
+     ▼
+┌────────────────┐
+│  API Endpoint  │  (POST /api/v1/query)
+│  Thin wrapper  │
+└───────┬────────┘
+        │
+        ▼
+┌────────────────┐
+│  AgentWorkflow │  (orchestration/workflow.py)
+│  The brain     │
+└───────┬────────┘
+        │
+        ▼
+┌────────────────┐
+│  IntentRouter  │  (orchestration/router.py)
+│  Classifies    │
+└───────┬────────┘
+        │
+        ├──── DATA_QUERY ────▶ DuckDB (core/data_engine.py)
+        │
+        ├──── KNOWLEDGE_QUERY ▶ ChromaDB + LLM (core/knowledge.py)
+        │
+        ├──── COMPLIANCE_CHECK ▶ Agents (agents/compliance.py)
+        │
+        └──── FOLDER_ANALYSIS ─▶ Agents (agents/discovery.py)
+                │
+                ▼
+            Response
 ```
 
 ---
 
-## 4. Knowledge Query Flow (Example)
+## 1. API Layer (Thin)
 
-```
-User: "What is the GST rate on laptops?"
-```
+### `api/app.py`
+- FastAPI application
+- 2 routes: `/upload` and `/query`
+- Just passes request to workflow
 
-### Step 1: Classification (`core/query_classifier.py`)
-
-| Function | What it does |
-|----------|--------------|
-| `QueryClassifier.classify(query)` | Determines query type |
-
-**Query Types:**
-```
-DEFINITION   → "What is CGST?"     → Use LLM knowledge
-RATE_LOOKUP  → "rate on laptops"   → Search CSV files
-LEGAL_RULE   → "Section 17(5)"     → Search ChromaDB
-DATA_QUERY   → "my total sales"    → Query DuckDB
+### `api/routes/query.py`
+```python
+@router.post("/query")
+async def query(request: QueryRequest, customer: ...):
+    workflow = AgentWorkflow(customer=ctx)
+    answer = workflow.run(request.query)  # <-- ALL logic here
+    return QueryResponse(answer=answer)
 ```
 
-### Step 2: Route to Source
-
-| Type | Source | Function |
-|------|--------|----------|
-| DEFINITION | LLM | `LLMClient.generate()` |
-| RATE_LOOKUP | CSV | `core/reference_data.py` → `search_rate_by_name()` |
-| LEGAL_RULE | ChromaDB | `core/knowledge.py` → `get_relevant_rules()` |
+**Key point:** API does nothing smart. Just calls `workflow.run()`.
 
 ---
 
-## 5. Knowledge Base Setup (One-Time)
+## 2. The Brain - AgentWorkflow
 
-Before using LedgerMind, the knowledge base must be populated:
+### `orchestration/workflow.py`
 
-```bash
-python scripts/ingest_knowledge.py
-```
-
-### 5.1 What Gets Ingested (`scripts/ingest_knowledge.py`)
-
-| Source | Type | What it contains |
-|--------|------|------------------|
-| `knowledge/gst/*.pdf` | PDF files | CGST Act, CGST Rules, Notifications |
-| `knowledge/accounting/*.pdf` | PDF files | Accounting standards |
-
-### 5.2 Ingestion Process
-
-```
-1. Load PDF files from knowledge/ folder
-   └── PyPDFLoader reads each PDF
-
-2. Split into chunks
-   └── RecursiveCharacterTextSplitter
-   └── chunk_size=1000, overlap=200
-
-3. Generate embeddings
-   └── HuggingFace BGE model (BAAI/bge-large-en-v1.5)
-   └── Each chunk → 1024-dimension vector
-
-4. Store in ChromaDB
-   └── chroma_db/ folder
-   └── Collection: "gst_knowledge"
-```
-
-### 5.3 ChromaDB Structure
-
-```
-chroma_db/
-├── chroma.sqlite3          # Metadata and mappings
-└── {collection_id}/        # Vector embeddings
-    ├── data_level0.bin     # HNSW index
-    └── length.bin          # Vector lengths
-```
-
-### 5.4 How It's Used (Runtime)
-
-| Function | File | What it does |
-|----------|------|--------------|
-| `KnowledgeBase()` | `core/knowledge.py` | Loads ChromaDB collection |
-| `get_relevant_rules(query)` | `core/knowledge.py` | Searches for similar chunks |
+This is where everything happens:
 
 ```python
-# Example: User asks "When to file GSTR-3B?"
-query = "When to file GSTR-3B?"
-
-# 1. Convert query to embedding
-# 2. Search ChromaDB for similar chunks
-# 3. Return top 5 relevant chunks from CGST Rules PDF
-# 4. LLM uses these chunks to answer
-```
-
-### 5.5 Reference Data (CSV - NOT in ChromaDB)
-
-These are loaded directly from CSV, not ChromaDB:
-
-| File | Loaded by | Used for |
-|------|-----------|----------|
-| `db/gst/slabs.csv` | `load_gst_slabs()` | Rate slab definitions |
-| `db/gst/goods_hsn.csv` | `load_goods_rates()` | HSN code lookups |
-| `db/gst/services_sac.csv` | `load_services_rates()` | SAC code lookups |
-| `db/gst/blocked_itc.csv` | `load_blocked_credits()` | Section 17(5) items |
-| `db/msme/classification.csv` | `load_msme_classification()` | MSME thresholds |
-| `db/india/state_codes.csv` | `load_state_codes()` | State code validation |
-
----
-
-## 6. File/Module Reference
-
-### Core Files
-
-| File | Purpose | Key Functions |
-|------|---------|---------------|
-| `main.py` | Entry point, CLI loop | `main()`, `select_customer()` |
-| `config.py` | All configuration | Paths, model settings, prompts |
-| `core/customer.py` | Customer isolation | `CustomerContext`, `CustomerManager` |
-| `core/data_engine.py` | DuckDB operations | `load_excel()`, `load_csv()`, `query()` |
-| `core/data_state.py` | File change detection | `detect_changes()`, `get_files_to_load()` |
-| `core/reference_data.py` | GST rates, MSME data | `load_goods_rates()`, `get_rate_for_hsn()` |
-| `core/knowledge.py` | ChromaDB RAG | `get_relevant_rules()` |
-| `core/query_classifier.py` | Query routing | `QueryClassifier.classify()` |
-| `core/guardrails.py` | Input validation | `validate_gstin()`, `validate_tax_calculation()` |
-
-### Orchestration
-
-| File | Purpose | Key Functions |
-|------|---------|---------------|
-| `orchestration/router.py` | Intent detection | `IntentRouter.route()` |
-| `orchestration/workflow.py` | Main workflow | `AgentWorkflow.run()`, handlers |
-
-### Agents
-
-| File | Purpose | Key Functions |
-|------|---------|---------------|
-| `agents/discovery.py` | Data ingestion | `discover()`, `map_headers()` |
-| `agents/compliance.py` | Compliance checking | `run_full_audit()` |
-| `agents/strategist.py` | Strategic analysis | `run_full_analysis()` |
-
-### LLM
-
-| File | Purpose | Key Functions |
-|------|---------|---------------|
-| `llm/client.py` | Ollama integration | `generate()`, `generate_json()` |
-
-### Scripts
-
-| File | Purpose | When to run |
-|------|---------|-------------|
-| `scripts/ingest_knowledge.py` | Load PDFs into ChromaDB | Once, at setup |
-| `scripts/create_sample_data.py` | Generate test Excel/CSV | For testing |
-| `scripts/scrape_gst_rates.py` | Update GST rates from CBIC | When rates change |
-
----
-
-## 7. Data Flow Diagram
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                         USER                                 │
-│                    (types question)                          │
-└─────────────────────────┬───────────────────────────────────┘
-                          │
-                          ▼
-┌─────────────────────────────────────────────────────────────┐
-│                      main.py                                 │
-│                  (CLI input loop)                            │
-└─────────────────────────┬───────────────────────────────────┘
-                          │
-                          ▼
-┌─────────────────────────────────────────────────────────────┐
-│               orchestration/router.py                        │
-│                 IntentRouter.route()                         │
-│           Determines: DATA / KNOWLEDGE / etc.                │
-└─────────────────────────┬───────────────────────────────────┘
-                          │
-          ┌───────────────┼───────────────┐
-          │               │               │
-          ▼               ▼               ▼
-┌─────────────┐   ┌─────────────┐   ┌─────────────┐
-│ DATA_QUERY  │   │ KNOWLEDGE   │   │ COMPLIANCE  │
-│             │   │   QUERY     │   │   CHECK     │
-└──────┬──────┘   └──────┬──────┘   └──────┬──────┘
-       │                 │                 │
-       ▼                 ▼                 ▼
-┌─────────────┐   ┌─────────────┐   ┌─────────────┐
-│   DuckDB    │   │ LLM / CSV / │   │ Compliance  │
-│   (User's   │   │  ChromaDB   │   │   Agent     │
-│    data)    │   │  (Rules)    │   │             │
-└─────────────┘   └─────────────┘   └─────────────┘
+def run(self, user_input: str) -> str:
+    # Step 1: Classify intent
+    intent = self.router.route(user_input)
+    
+    # Step 2: Route to handler
+    if intent.intent_type == IntentType.DATA_QUERY:
+        return self._handle_data_query(intent.extracted_query)
+    
+    elif intent.intent_type == IntentType.KNOWLEDGE_QUERY:
+        return self._handle_knowledge_query(intent.extracted_query)
+    
+    elif intent.intent_type == IntentType.COMPLIANCE_CHECK:
+        return self._handle_compliance_check()
+    
+    # ... etc
 ```
 
 ---
 
-## 8. Startup Sequence Summary
+## 3. Intent Classification
+
+### `orchestration/router.py`
+
+Pattern-based + LLM classification:
+
+```python
+class IntentType(Enum):
+    DATA_QUERY = "data_query"           # "show my sales"
+    KNOWLEDGE_QUERY = "knowledge_query" # "what is CGST"
+    COMPLIANCE_CHECK = "compliance"     # "check compliance"
+    FOLDER_ANALYSIS = "folder"          # "analyze my data"
+    HELP = "help"
+    UNKNOWN = "unknown"
+```
+
+The router checks patterns first, then uses LLM if unclear.
+
+---
+
+## 4. Data Queries
+
+### Flow
 
 ```
-1. main.py
-   └── print_banner()
-   └── check_ollama()
-   └── CustomerManager()
-   └── select_customer()
-       └── CustomerContext(customer_id)
-           └── ensure_exists()
-               └── Creates workspace/{id}/
-   └── AgentWorkflow(customer)
-       └── KnowledgeBase()           # Shared ChromaDB
-       └── LLMClient()               # Shared Ollama
-       └── customer.get_data_engine() # Customer's DuckDB
-       └── customer.get_data_state_manager()
-       └── _smart_load_data()        # Load new/changed files
-   └── Interactive loop
-       └── workflow.run(user_input)
-           └── router.route() → _handle_xxx()
+"What is my total sales?"
+        │
+        ▼
+┌─────────────────┐
+│ _handle_data_   │
+│ query()         │
+└───────┬─────────┘
+        │
+        ▼
+┌─────────────────┐
+│ Get table       │
+│ schemas from    │
+│ DuckDB          │
+└───────┬─────────┘
+        │
+        ▼
+┌─────────────────┐
+│ LLM generates   │
+│ SQL query       │
+└───────┬─────────┘
+        │
+        ▼
+┌─────────────────┐
+│ Execute SQL     │
+│ in DuckDB       │
+└───────┬─────────┘
+        │
+        ▼
+┌─────────────────┐
+│ LLM formats     │
+│ response        │
+└───────┬─────────┘
+        │
+        ▼
+    Answer
+```
+
+### Key Files
+
+| File | Purpose |
+|------|---------|
+| `core/data_engine.py` | DuckDB operations |
+| `orchestration/workflow.py` | SQL generation via LLM |
+
+---
+
+## 5. Knowledge Queries
+
+### Flow
+
+```
+"What is CGST?"
+        │
+        ▼
+┌─────────────────┐
+│ QueryClassifier │  Determines: DEFINITION / RATE_LOOKUP / LEGAL_RULE
+└───────┬─────────┘
+        │
+        ├── DEFINITION ──▶ LLM general knowledge
+        │
+        ├── RATE_LOOKUP ─▶ CSV files (db/gst/goods_hsn.csv)
+        │
+        └── LEGAL_RULE ──▶ ChromaDB RAG
+                │
+                ▼
+            Answer
+```
+
+### Key Files
+
+| File | Purpose |
+|------|---------|
+| `core/query_classifier.py` | Sub-classifies knowledge queries |
+| `core/knowledge.py` | ChromaDB search |
+| `core/reference_data.py` | CSV lookups |
+
+---
+
+## 6. Customer Isolation
+
+### `core/customer.py`
+
+Each customer gets:
+```
+workspace/{customer_id}/
+├── data/                  # Their Excel/CSV files
+├── {customer_id}.duckdb   # Their database
+├── profile.json           # Metadata
+└── data_state.json        # File change tracking
+```
+
+### Flow
+
+```
+API Request with X-API-Key
+        │
+        ▼
+┌─────────────────┐
+│ api/auth.py     │  Validates key, gets customer_id
+└───────┬─────────┘
+        │
+        ▼
+┌─────────────────┐
+│ CustomerContext │  Loads customer's DuckDB, workspace
+└───────┬─────────┘
+        │
+        ▼
+    Workflow uses customer's data only
 ```
 
 ---
 
-## 9. Key Design Decisions
+## 7. Smart Data Loading
 
-| Decision | Reason |
-|----------|--------|
-| **API-only product** | Like OpenAI — customers call API from their apps |
-| **No customer UI** | We provide API, they build their UI |
-| **Streamlit = internal** | For our testing/debugging only |
-| **DuckDB per customer** | Data isolation, no cross-contamination |
-| **Shared ChromaDB** | GST rules same for everyone, save memory |
-| **Shared LLM** | Single Ollama instance, efficient |
-| **Smart file loading** | Only reload changed files (by hash) |
-| **Query classification** | Route to best knowledge source |
-| **Fallback mechanisms** | Show helpful data when queries fail |
-| **CSV for rates** | Easy to update, human-readable |
-| **ChromaDB for legal** | Semantic search on PDF content |
+### `core/data_state.py`
+
+Tracks file changes automatically:
+
+```python
+# On startup or query
+data_state = DataStateManager(customer.root_dir)
+changes = data_state.get_changes()
+
+if changes["new"] or changes["modified"]:
+    # Load only changed files
+    for file in changes["new"]:
+        engine.load_file(file)
+```
+
+No manual "refresh data" needed.
 
 ---
 
-## 10. Adding New Features (Quick Guide)
+## 8. File Summary
 
-### Add a new command:
-1. Add pattern in `orchestration/router.py` → `patterns` dict
-2. Add handler in `orchestration/workflow.py` → `run()` method
+### Core (The Brain)
 
-### Add new reference data:
-1. Add CSV to `db/` folder
-2. Add loader in `core/reference_data.py`
-3. Add path in `config.py`
+| File | One-liner |
+|------|-----------|
+| `orchestration/workflow.py` | **THE MAIN FILE** - LLM routing |
+| `orchestration/router.py` | Intent classification |
+| `llm/client.py` | Ollama connection |
 
-### Add new agent:
-1. Create `agents/new_agent.py`
-2. Initialize in `orchestration/workflow.py`
-3. Add handler method
+### Data Sources
 
+| File | One-liner |
+|------|-----------|
+| `core/data_engine.py` | DuckDB for customer data |
+| `core/knowledge.py` | ChromaDB for GST rules |
+| `core/reference_data.py` | CSV lookups |
+
+### Customer Management
+
+| File | One-liner |
+|------|-----------|
+| `core/customer.py` | Customer isolation |
+| `core/data_state.py` | File change detection |
+
+### API (Thin Wrapper)
+
+| File | One-liner |
+|------|-----------|
+| `api/app.py` | FastAPI entry |
+| `api/auth.py` | API key validation |
+| `api/routes/query.py` | POST /query |
+| `api/routes/upload.py` | POST /upload |
+
+### Streamlit (Internal)
+
+| File | One-liner |
+|------|-----------|
+| `streamlit/app.py` | Streamlit UI |
+| `streamlit/api_keys.py` | Key management |
+
+---
+
+## Key Design Decisions
+
+### 1. Single Query Endpoint
+
+**Why not `/data/query` and `/knowledge/query`?**
+
+The LLM already routes internally. Exposing multiple endpoints just duplicates logic.
+
+### 2. LLM Decides Everything
+
+The `IntentRouter` classifies intent, then the appropriate handler runs. No hardcoded rules about "if query contains X, do Y".
+
+### 3. API is Thin
+
+API routes just call `workflow.run()`. All intelligence is in the workflow.
+
+### 4. Customer Isolation by Default
+
+Every API request is tied to a customer. No cross-customer data access.
+
+---
+
+## Adding New Features
+
+### Add a new query type
+
+1. Add to `IntentType` enum in `router.py`
+2. Add pattern in `_classify()` method
+3. Add handler in `workflow.py`
+
+### Add a new data source
+
+1. Create loader in `core/`
+2. Call from appropriate handler in `workflow.py`
+
+### Add a new API endpoint
+
+Don't. Just handle it in `workflow.py` and let `/query` route to it.
+
+---
+
+**Remember: All roads lead to `workflow.run()`**
