@@ -168,13 +168,21 @@ Small businesses have messy Excel files and confusing tax rules.
 | **MSME Limits** | CSV file | Micro/Small/Medium thresholds | Classification |
 | **Blocked ITC** | CSV file | Section 17(5) items | ITC eligibility |
 
-### What Users Provide (Per-user)
+### What Users Provide
 
-| Component | Type | Example | Storage |
-|-----------|------|---------|---------|
-| **Excel Files** | .xlsx, .xls, .csv | sales.xlsx, purchases.xlsx | `workspace/{user}/data/` |
-| **Database** | DuckDB | SQL-queryable tables | `workspace/{user}/{user}.duckdb` |
-| **Profile** | JSON | Company info, GSTIN | `workspace/{user}/profile.json` |
+| What | Formats | Example |
+|------|---------|---------|
+| **Excel/CSV Files** | .xlsx, .xls, .csv | sales.xlsx, purchases.xlsx, bank_statement.csv |
+
+**That's it.** Users just upload their files. Our system does the rest.
+
+### What Our System Creates (Using LLM)
+
+| Component | Created By | Purpose | Storage |
+|-----------|------------|---------|---------|
+| **DuckDB Database** | Discovery Agent | SQL-queryable tables from user's files | `workspace/{user}/{user}.duckdb` |
+| **Profile** | System | Company info, settings | `workspace/{user}/profile.json` |
+| **Data State** | System | Tracks file changes for auto-reload | `workspace/{user}/data_state.json` |
 
 ### AI Agents
 
