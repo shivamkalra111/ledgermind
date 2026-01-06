@@ -7,101 +7,282 @@
 ## 🎯 What Is This?
 
 Small businesses have messy Excel files and confusing tax rules.  
-**LedgerMind** is an AI that reads your files and answers questions.
+**LedgerMind** is an AI that reads your files, knows GST rules, and answers questions.
 
 ---
 
-## 🧠 How It Works (For Non-Tech People)
+## 🏗️ Complete Architecture
 
-### The Simple Flow
+### The Big Picture
 
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│                                                                     │
-│  STEP 1: Upload                 STEP 2: Ask                        │
-│  ─────────────                  ─────────                          │
-│                                                                     │
-│  📁 Your Excel files    ───▶    💬 "What are my total sales?"      │
-│     (sales, purchases)                                              │
-│                                          │                          │
-│                                          ▼                          │
-│                                                                     │
-│                              ┌─────────────────┐                   │
-│                              │    🧠 AI Brain  │                   │
-│                              │                 │                   │
-│                              │  Reads files    │                   │
-│                              │  Knows GST rules│                   │
-│                              │  Finds answer   │                   │
-│                              └────────┬────────┘                   │
-│                                       │                             │
-│                                       ▼                             │
-│                                                                     │
-│                              📊 "Your total sales: ₹5,00,000"      │
-│                                                                     │
-│  STEP 3: Get Answer                                                │
-│  ──────────────────                                                 │
-│                                                                     │
-└─────────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────────────────────┐
+│                                                                                      │
+│                              LEDGERMIND SYSTEM                                       │
+│                                                                                      │
+│  ┌────────────────────────────────────────────────────────────────────────────────┐  │
+│  │                                                                                │  │
+│  │                         📚 PRE-LOADED KNOWLEDGE                                │  │
+│  │                         (We provide this - same for all users)                 │  │
+│  │                                                                                │  │
+│  │   ┌─────────────────┐   ┌─────────────────┐   ┌─────────────────┐            │  │
+│  │   │  GST Rules      │   │  Tax Rates      │   │  Accounting     │            │  │
+│  │   │  (PDFs)         │   │  (CSVs)         │   │  Standards      │            │  │
+│  │   │                 │   │                 │   │  (PDFs)         │            │  │
+│  │   │  • CGST Act     │   │  • 89 goods     │   │                 │            │  │
+│  │   │  • GST Rules    │   │  • 50 services  │   │  • AS, Ind AS   │            │  │
+│  │   │  • Notifications│   │  • State codes  │   │  • Standards    │            │  │
+│  │   │                 │   │  • MSME limits  │   │                 │            │  │
+│  │   └────────┬────────┘   └────────┬────────┘   └────────┬────────┘            │  │
+│  │            │                     │                     │                      │  │
+│  │            └─────────────────────┼─────────────────────┘                      │  │
+│  │                                  │                                            │  │
+│  │                                  ▼                                            │  │
+│  │                    ┌─────────────────────────┐                                │  │
+│  │                    │     ChromaDB            │                                │  │
+│  │                    │  (Vector Database)      │                                │  │
+│  │                    │                         │                                │  │
+│  │                    │  1,276 searchable       │                                │  │
+│  │                    │  knowledge chunks       │                                │  │
+│  │                    └─────────────────────────┘                                │  │
+│  │                                                                                │  │
+│  └────────────────────────────────────────────────────────────────────────────────┘  │
+│                                                                                      │
+│  ┌────────────────────────────────────────────────────────────────────────────────┐  │
+│  │                                                                                │  │
+│  │                         👥 USER DATA                                           │  │
+│  │                         (Each user uploads their own - completely separate)    │  │
+│  │                                                                                │  │
+│  │   User A                      User B                      User C              │  │
+│  │   ┌──────────────────┐       ┌──────────────────┐       ┌──────────────────┐  │  │
+│  │   │ 📁 Excel Files   │       │ 📁 Excel Files   │       │ 📁 Excel Files   │  │  │
+│  │   │ • sales.xlsx     │       │ • invoices.xlsx  │       │ • ledger.xlsx    │  │  │
+│  │   │ • purchases.xlsx │       │ • expenses.csv   │       │ • bank.csv       │  │  │
+│  │   │                  │       │                  │       │                  │  │  │
+│  │   │       ▼          │       │       ▼          │       │       ▼          │  │  │
+│  │   │                  │       │                  │       │                  │  │  │
+│  │   │ 🗄️ DuckDB        │       │ 🗄️ DuckDB        │       │ 🗄️ DuckDB        │  │  │
+│  │   │ (User A's DB)    │       │ (User B's DB)    │       │ (User C's DB)    │  │  │
+│  │   │                  │       │                  │       │                  │  │  │
+│  │   │ SQL-queryable    │       │ SQL-queryable    │       │ SQL-queryable    │  │  │
+│  │   │ tables from      │       │ tables from      │       │ tables from      │  │  │
+│  │   │ their files      │       │ their files      │       │ their files      │  │  │
+│  │   └──────────────────┘       └──────────────────┘       └──────────────────┘  │  │
+│  │                                                                                │  │
+│  │   🔒 ISOLATION: User A cannot see User B's data. Each has own database.       │  │
+│  │                                                                                │  │
+│  └────────────────────────────────────────────────────────────────────────────────┘  │
+│                                                                                      │
+│  ┌────────────────────────────────────────────────────────────────────────────────┐  │
+│  │                                                                                │  │
+│  │                         🧠 AI BRAIN (LLM + Agents)                             │  │
+│  │                                                                                │  │
+│  │   ┌────────────────────────────────────────────────────────────────────────┐  │  │
+│  │   │                                                                        │  │  │
+│  │   │                    LLM: Query Router (Qwen 2.5)                        │  │  │
+│  │   │                                                                        │  │  │
+│  │   │   User question comes in ───▶ LLM classifies and routes               │  │  │
+│  │   │                                                                        │  │  │
+│  │   │   "What are my sales?"  ───▶  DATA_QUERY                              │  │  │
+│  │   │   "What is CGST?"       ───▶  KNOWLEDGE_QUERY                         │  │  │
+│  │   │   "Check compliance"    ───▶  COMPLIANCE_CHECK                        │  │  │
+│  │   │   "Analyze my data"     ───▶  FOLDER_ANALYSIS                         │  │  │
+│  │   │                                                                        │  │  │
+│  │   └────────────────────────────────────────────────────────────────────────┘  │  │
+│  │                                        │                                       │  │
+│  │                                        ▼                                       │  │
+│  │   ┌────────────────────────────────────────────────────────────────────────┐  │  │
+│  │   │                                                                        │  │  │
+│  │   │                         🤖 AI AGENTS                                   │  │  │
+│  │   │                         (Specialized workers)                          │  │  │
+│  │   │                                                                        │  │  │
+│  │   │   ┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐    │  │  │
+│  │   │   │  🔍 DISCOVERY    │  │  ✅ COMPLIANCE   │  │  📈 STRATEGIST   │    │  │  │
+│  │   │   │     AGENT        │  │     AGENT        │  │     AGENT        │    │  │  │
+│  │   │   │                  │  │                  │  │                  │    │  │  │
+│  │   │   │  Reads Excel     │  │  Checks GST      │  │  Gives business  │    │  │  │
+│  │   │   │  files, maps     │  │  rules, finds    │  │  advice, finds   │    │  │  │
+│  │   │   │  columns, loads  │  │  tax mistakes,   │  │  savings, warns  │    │  │  │
+│  │   │   │  into DuckDB     │  │  validates       │  │  about risks     │    │  │  │
+│  │   │   │                  │  │  GSTINs          │  │                  │    │  │  │
+│  │   │   └──────────────────┘  └──────────────────┘  └──────────────────┘    │  │  │
+│  │   │                                                                        │  │  │
+│  │   │   Each agent uses LLM + domain knowledge to complete its task         │  │  │
+│  │   │                                                                        │  │  │
+│  │   └────────────────────────────────────────────────────────────────────────┘  │  │
+│  │                                        │                                       │  │
+│  │                                        ▼                                       │  │
+│  │   ┌────────────────────────────────────────────────────────────────────────┐  │  │
+│  │   │                                                                        │  │  │
+│  │   │                    LLM: SQL Generator (For data queries)               │  │  │
+│  │   │                                                                        │  │  │
+│  │   │   "Show November sales"                                               │  │  │
+│  │   │         │                                                              │  │  │
+│  │   │         ▼                                                              │  │  │
+│  │   │   LLM generates SQL: SELECT * FROM sales WHERE month = 'November'     │  │  │
+│  │   │         │                                                              │  │  │
+│  │   │         ▼                                                              │  │  │
+│  │   │   Execute on user's DuckDB ───▶ Format response                       │  │  │
+│  │   │                                                                        │  │  │
+│  │   └────────────────────────────────────────────────────────────────────────┘  │  │
+│  │                                                                                │  │
+│  └────────────────────────────────────────────────────────────────────────────────┘  │
+│                                                                                      │
+│  ┌────────────────────────────────────────────────────────────────────────────────┐  │
+│  │                                                                                │  │
+│  │                         🌐 ACCESS LAYER                                        │  │
+│  │                                                                                │  │
+│  │   FOR CUSTOMERS                              FOR US (Internal)                │  │
+│  │   ─────────────                              ──────────────────                │  │
+│  │                                                                                │  │
+│  │   ┌─────────────────────────┐              ┌─────────────────────────┐        │  │
+│  │   │      FastAPI            │              │      Streamlit          │        │  │
+│  │   │      (REST API)         │              │      (Testing UI)       │        │  │
+│  │   │                         │              │                         │        │  │
+│  │   │  POST /upload           │              │  • Select customer      │        │  │
+│  │   │  POST /query            │              │  • Upload files         │        │  │
+│  │   │                         │              │  • Chat with AI         │        │  │
+│  │   │  + API Key Auth         │              │  • Debug issues         │        │  │
+│  │   │                         │              │                         │        │  │
+│  │   └─────────────────────────┘              └─────────────────────────┘        │  │
+│  │                                                                                │  │
+│  │   Customers call our API                   We use Streamlit to test           │  │
+│  │   from their own apps                      (NOT given to customers)           │  │
+│  │                                                                                │  │
+│  └────────────────────────────────────────────────────────────────────────────────┘  │
+│                                                                                      │
+└──────────────────────────────────────────────────────────────────────────────────────┘
 ```
-
-### What You Can Ask
-
-| Question Type | Example | Where AI Looks |
-|---------------|---------|----------------|
-| **Your Data** | "Show my November sales" | Your Excel files |
-| **Tax Rules** | "What is CGST?" | GST knowledge base |
-| **Tax Rates** | "GST on laptops?" | Rate database |
-| **Compliance** | "Any tax issues?" | Checks your data |
-
-**One input box. AI figures out the rest.**
 
 ---
 
-## 🔌 How Customers Use It
+## 📊 Component Breakdown
 
-We provide an **API** (like OpenAI). Customers call it from their code.
+### What We Provide (Pre-loaded)
 
-| What | How |
-|------|-----|
-| **Upload files** | `POST /api/v1/upload` + your Excel files |
-| **Ask anything** | `POST /api/v1/query` + your question |
+| Component | Type | Contents | Purpose |
+|-----------|------|----------|---------|
+| **GST Rules** | PDFs → ChromaDB | CGST Act, Rules, Notifications | Answer legal questions |
+| **Tax Rates** | CSV files | 89 goods (HSN), 50 services (SAC) | Rate lookups |
+| **State Codes** | CSV file | All 38 GST state codes | GSTIN validation |
+| **MSME Limits** | CSV file | Micro/Small/Medium thresholds | Classification |
+| **Blocked ITC** | CSV file | Section 17(5) items | ITC eligibility |
 
-```bash
-# Example: Ask a question
-curl -X POST http://localhost:8000/api/v1/query \
-  -H "X-API-Key: YOUR_KEY" \
-  -d '{"query": "What is my total sales?"}'
+### What Users Provide (Per-user)
 
-# Response
-{"answer": "Your total sales: ₹5,00,000"}
-```
+| Component | Type | Example | Storage |
+|-----------|------|---------|---------|
+| **Excel Files** | .xlsx, .xls, .csv | sales.xlsx, purchases.xlsx | `workspace/{user}/data/` |
+| **Database** | DuckDB | SQL-queryable tables | `workspace/{user}/{user}.duckdb` |
+| **Profile** | JSON | Company info, GSTIN | `workspace/{user}/profile.json` |
 
-**No UI from us.** Customers build their own or use the API directly.
+### AI Agents
+
+| Agent | Purpose | When Used | What It Does |
+|-------|---------|-----------|--------------|
+| **🔍 Discovery Agent** | Understand data | User uploads files | Reads Excel, maps columns to standard names, loads into DuckDB |
+| **✅ Compliance Agent** | Check tax rules | "Check compliance" | Validates GSTINs, checks tax calculations, finds mistakes |
+| **📈 Strategist Agent** | Business advice | "Analyze my business" | Finds tax savings, warns about risks, vendor analysis |
+
+### LLM Responsibilities
+
+| LLM Role | What It Does | Input | Output |
+|----------|--------------|-------|--------|
+| **Query Router** | Classifies user question | "What is CGST?" | Route to: Knowledge |
+| **Agent Coordinator** | Triggers right agent | "Check compliance" | Run: Compliance Agent |
+| **SQL Generator** | Converts question to SQL | "Show sales" | `SELECT * FROM sales` |
+| **Response Formatter** | Makes results readable | Raw data | "Your sales: ₹5L" |
+
+### Access Methods
+
+| Method | Who Uses It | Purpose | Authentication |
+|--------|-------------|---------|----------------|
+| **FastAPI** | Customers | Production use | API Key required |
+| **Streamlit** | Us only | Testing & debugging | Internal only |
 
 ---
 
-## 📁 Project Structure (Simplified)
+## 🔄 Data Flow Example
+
+### User Asks: "What were my November sales?"
+
+```
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                                                                                 │
+│  Step 1: User sends question via API                                           │
+│  ───────────────────────────────────                                           │
+│                                                                                 │
+│  POST /api/v1/query                                                            │
+│  { "query": "What were my November sales?" }                                   │
+│  Header: X-API-Key: lm_live_xxxxx                                              │
+│                                                                                 │
+│         │                                                                       │
+│         ▼                                                                       │
+│                                                                                 │
+│  Step 2: API validates key, identifies user                                    │
+│  ──────────────────────────────────────────                                    │
+│                                                                                 │
+│  API Key → User: "acme_corp" → Load acme_corp's DuckDB                        │
+│                                                                                 │
+│         │                                                                       │
+│         ▼                                                                       │
+│                                                                                 │
+│  Step 3: LLM Router classifies question                                        │
+│  ──────────────────────────────────────                                        │
+│                                                                                 │
+│  "November sales" → DATA_QUERY (needs user's database)                         │
+│                                                                                 │
+│         │                                                                       │
+│         ▼                                                                       │
+│                                                                                 │
+│  Step 4: LLM generates SQL                                                     │
+│  ─────────────────────────                                                     │
+│                                                                                 │
+│  LLM sees: Table "sales" with columns [date, amount, customer, invoice_no]     │
+│  LLM generates: SELECT SUM(amount) FROM sales WHERE date LIKE '%-11-%'         │
+│                                                                                 │
+│         │                                                                       │
+│         ▼                                                                       │
+│                                                                                 │
+│  Step 5: Execute SQL on user's DuckDB                                          │
+│  ────────────────────────────────────                                          │
+│                                                                                 │
+│  Result: 250000                                                                 │
+│                                                                                 │
+│         │                                                                       │
+│         ▼                                                                       │
+│                                                                                 │
+│  Step 6: LLM formats response                                                  │
+│  ────────────────────────────                                                  │
+│                                                                                 │
+│  { "answer": "Your November sales were ₹2,50,000" }                           │
+│                                                                                 │
+└─────────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 📁 Folder Structure
 
 ```
 ledgermind/
 │
-├── 🧠 LLM Brain
-│   ├── llm/                  # Talks to AI model
-│   └── orchestration/        # Routes questions to right place
+├── 📚 db/                    # Pre-loaded knowledge (CSVs)
+├── 📚 knowledge/             # Pre-loaded knowledge (PDFs)
 │
-├── 📊 Data Sources  
-│   ├── core/data_engine.py   # Reads customer Excel files
-│   ├── core/knowledge.py     # GST rules database
-│   └── db/                   # Tax rates (CSV files)
+├── 🤖 agents/                # AI Agents (Discovery, Compliance, Strategist)
+├── 🧠 llm/                   # LLM connection (Ollama)
+├── 🎯 orchestration/         # Query routing & workflow
+├── ⚙️ core/                   # Data engine, knowledge base, utilities
 │
-├── 🌐 API (for customers)
-│   └── api/                  # FastAPI endpoints
+├── 🌐 api/                   # FastAPI (for customers)
+├── 🔧 streamlit/             # Streamlit UI (internal testing)
 │
-├── 🔧 Internal Tools
-│   └── streamlit/            # Our testing UI (not for customers)
+├── 👥 workspace/             # User data (per-user, isolated)
 │
-└── 📂 Customer Data
-    └── workspace/            # Each customer's files stored here
+├── main.py                   # CLI entry point
+├── config.py                 # Configuration
+└── requirements.txt          # Dependencies
 ```
 
 ---
@@ -109,68 +290,75 @@ ledgermind/
 ## 🚀 Quick Start
 
 ```bash
-# 1. Setup
+# 1. Install
 pip install -r requirements.txt
 
-# 2. Start AI
+# 2. Start AI model
 ollama pull qwen2.5:7b-instruct
 ollama serve
 
 # 3. Start API
 uvicorn api.app:app --port 8000
 
-# 4. Create API key for a customer
+# 4. Create API key
 python -m streamlit.api_keys create company_name
 ```
-
-**API ready at:** http://localhost:8000/docs
 
 ---
 
 ## 📈 Current Status
 
-| What | Status |
-|------|--------|
-| AI Brain | ✅ Working |
-| Read Excel/CSV | ✅ Working |
-| GST Knowledge | ✅ 1,276 rules loaded |
-| API | ✅ 2 endpoints |
-| Customer Isolation | ✅ Each customer separate |
-
-### Known Limitations
-
-- SQL accuracy ~70% (improving in Phase 2)
-- Needs Ollama running locally
+| Layer | Component | Status | Notes |
+|-------|-----------|--------|-------|
+| **Knowledge** | ChromaDB | ✅ Ready | 1,276 chunks loaded |
+| **Knowledge** | Tax CSVs | ✅ Ready | 89 goods, 50 services |
+| **User Data** | DuckDB | ✅ Ready | Per-user databases |
+| **User Data** | File Detection | ✅ Ready | Auto-reload on change |
+| **Agents** | Discovery | ✅ Ready | Reads & maps Excel files |
+| **Agents** | Compliance | ✅ Ready | Tax rule checking |
+| **Agents** | Strategist | ✅ Ready | Business advice |
+| **LLM** | Query Router | ✅ Ready | Classifies all queries |
+| **LLM** | SQL Generator | ⚠️ Basic | ~70% accuracy |
+| **Access** | FastAPI | ✅ Ready | 2 endpoints |
+| **Access** | Streamlit | ✅ Ready | Internal testing |
+| **Security** | API Keys | ✅ Ready | Per-user auth |
+| **Security** | Data Isolation | ✅ Ready | Users can't see each other |
 
 ---
 
 ## 🗺️ Roadmap
 
-```
-DONE ✅              NEXT                    FUTURE
-   │                  │                        │
-   ▼                  ▼                        ▼
-┌────────┐      ┌────────┐      ┌────────┐      ┌────────┐
-│ Phase 1│      │Phase 1B│      │ Phase 2│      │ Phase 3│
-│        │      │        │      │        │      │        │
-│ AI Core│─────▶│  API   │─────▶│ Better │─────▶│Advanced│
-│        │      │        │      │  SQL   │      │Features│
-│  DONE  │      │  DONE  │      │        │      │        │
-└────────┘      └────────┘      └────────┘      └────────┘
-```
+| Phase | Focus | Status | Key Features |
+|-------|-------|--------|--------------|
+| **Phase 1** | Core LLM + Agents | ✅ Done | DuckDB, ChromaDB, 3 Agents |
+| **Phase 1B** | API Layer | ✅ Done | FastAPI, Auth, Streamlit |
+| **Phase 2** | Better SQL | 🔜 Next | Specialized SQL model, 90%+ accuracy |
+| **Phase 3** | Advanced | 📅 Planned | Alerts, Reports, Google Sheets |
 
 ---
 
 ## ❓ FAQ
 
-**Q: Is my data safe?**  
-> Yes. Everything runs on your computer. Nothing goes to cloud.
+**Q: Is user data safe?**  
+> Yes. Each user has their own DuckDB database. User A cannot access User B's data. Everything runs locally.
 
-**Q: Why no web dashboard?**  
-> We're API-only. Like OpenAI — you call our API, build your own UI.
+**Q: What knowledge does the AI have?**  
+> Pre-loaded: GST rules (CGST Act, notifications), tax rates (89 goods, 50 services), MSME limits, state codes. This is same for all users.
 
-**Q: What if AI gives wrong answer?**  
-> Rephrase your question. Phase 2 will have better accuracy.
+**Q: What are the AI Agents?**  
+> Three specialized workers: Discovery (reads your files), Compliance (checks tax rules), Strategist (gives business advice). Each uses LLM + domain knowledge.
+
+**Q: What data do users provide?**  
+> Users upload their own Excel/CSV files (sales, purchases, bank statements). This becomes their private, queryable database.
+
+**Q: How does the AI know where to look?**  
+> LLM Router classifies every question and routes it to the right place: user's DuckDB, ChromaDB knowledge, CSV rates, or an Agent.
+
+**Q: Why no web dashboard for customers?**  
+> We're API-only (like OpenAI, Stripe). Customers integrate our API into their own apps. Streamlit is only for our internal testing.
+
+**Q: Can this work offline?**  
+> Yes, after initial setup. Ollama runs locally, all data is local.
 
 ---
 
