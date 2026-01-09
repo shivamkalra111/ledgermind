@@ -12,6 +12,9 @@ workspace/*/data_state.json
 # API keys (sensitive!)
 workspace/.api_keys.json
 
+# Streamlit session (local login state)
+workspace/.streamlit_session.json
+
 # Metrics and evaluation results
 rag_metrics.jsonl
 evaluation_results.json

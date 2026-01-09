@@ -3,7 +3,7 @@
 Internal tool for testing the API.
 
 Features:
-- Persistent login (survives refresh)
+- Persistent login using local session file (survives refresh)
 - File management panel
 - ChatGPT-style chat interface
 
@@ -15,12 +15,16 @@ Run:
 import streamlit as st
 import requests
 import sys
+import json
 from pathlib import Path
 from datetime import datetime
 
 # Add project root to path
 PROJECT_ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
+
+# Session file for persistent login
+SESSION_FILE = PROJECT_ROOT / "workspace" / ".streamlit_session.json"
 
 
 # =============================================================================
@@ -98,16 +102,47 @@ st.markdown("""
 # Session State Initialization
 # =============================================================================
 
-if "logged_in" not in st.session_state:
-    st.session_state.logged_in = False
-if "customer_id" not in st.session_state:
-    st.session_state.customer_id = None
-if "api_key" not in st.session_state:
-    st.session_state.api_key = None
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
 if "show_files" not in st.session_state:
     st.session_state.show_files = True
+
+
+# =============================================================================
+# Persistent Session Functions (File-based)
+# =============================================================================
+
+def load_saved_session():
+    """Load session from local file."""
+    try:
+        if SESSION_FILE.exists():
+            data = json.loads(SESSION_FILE.read_text())
+            return data.get("customer_id"), data.get("api_key")
+    except Exception:
+        pass
+    return None, None
+
+
+def save_session(customer_id: str, api_key: str):
+    """Save session to local file."""
+    try:
+        SESSION_FILE.parent.mkdir(parents=True, exist_ok=True)
+        SESSION_FILE.write_text(json.dumps({
+            "customer_id": customer_id,
+            "api_key": api_key,
+            "saved_at": datetime.now().isoformat()
+        }, indent=2))
+    except Exception:
+        pass
+
+
+def clear_saved_session():
+    """Clear saved session file."""
+    try:
+        if SESSION_FILE.exists():
+            SESSION_FILE.unlink()
+    except Exception:
+        pass
 
 
 # =============================================================================
@@ -143,12 +178,12 @@ def validate_login(customer_id: str, api_key: str) -> tuple:
         return False, str(e)
 
 
-def api_query(query: str) -> dict:
+def api_query(query: str, api_key: str) -> dict:
     """Send query to API."""
     try:
         response = requests.post(
             f"{API_BASE_URL}/api/v1/query",
-            headers={"X-API-Key": st.session_state.api_key},
+            headers={"X-API-Key": api_key},
             json={"query": query},
             timeout=120
         )
@@ -159,13 +194,13 @@ def api_query(query: str) -> dict:
         return {"success": False, "answer": f"❌ Error: {str(e)}"}
 
 
-def api_upload(files) -> dict:
+def api_upload(files, api_key: str) -> dict:
     """Upload files via API."""
     try:
         files_data = [("files", (f.name, f.read(), "application/octet-stream")) for f in files]
         response = requests.post(
             f"{API_BASE_URL}/api/v1/upload",
-            headers={"X-API-Key": st.session_state.api_key},
+            headers={"X-API-Key": api_key},
             files=files_data,
             timeout=60
         )
@@ -174,12 +209,12 @@ def api_upload(files) -> dict:
         return {"success": False, "message": str(e)}
 
 
-def api_list_files() -> dict:
+def api_list_files(api_key: str) -> dict:
     """List files via API."""
     try:
         response = requests.get(
             f"{API_BASE_URL}/api/v1/files",
-            headers={"X-API-Key": st.session_state.api_key},
+            headers={"X-API-Key": api_key},
             timeout=10
         )
         return response.json()
@@ -187,12 +222,12 @@ def api_list_files() -> dict:
         return {"success": False, "files": []}
 
 
-def api_delete_file(filename: str) -> dict:
+def api_delete_file(filename: str, api_key: str) -> dict:
     """Delete file via API."""
     try:
         response = requests.delete(
             f"{API_BASE_URL}/api/v1/files/{filename}",
-            headers={"X-API-Key": st.session_state.api_key},
+            headers={"X-API-Key": api_key},
             timeout=10
         )
         return response.json()
@@ -241,6 +276,8 @@ def show_login():
                 placeholder="lm_test_easy_key_12345"
             )
             
+            remember_me = st.checkbox("Remember me", value=True)
+            
             submitted = st.form_submit_button("🔐 Login", use_container_width=True)
             
             if submitted:
@@ -251,10 +288,16 @@ def show_login():
                         success, message = validate_login(customer_id, api_key)
                     
                     if success:
-                        st.session_state.logged_in = True
+                        # Save to session state
                         st.session_state.customer_id = customer_id
                         st.session_state.api_key = api_key
+                        st.session_state.logged_in = True
                         st.session_state.chat_history = []
+                        
+                        # Save to file if remember me
+                        if remember_me:
+                            save_session(customer_id, api_key)
+                        
                         st.rerun()
                     else:
                         st.error(f"Login failed: {message}")
@@ -267,15 +310,16 @@ def show_login():
 # Main App (After Login)
 # =============================================================================
 
-def show_main_app():
+def show_main_app(customer_id: str, api_key: str):
     """Display main application after login."""
     
     # Sidebar
     with st.sidebar:
         # User info & logout
-        st.markdown(f"### 👤 {st.session_state.customer_id}")
+        st.markdown(f"### 👤 {customer_id}")
         
         if st.button("🚪 Logout", use_container_width=True):
+            clear_saved_session()
             st.session_state.logged_in = False
             st.session_state.customer_id = None
             st.session_state.api_key = None
@@ -297,7 +341,7 @@ def show_main_app():
         if uploaded:
             if st.button("📤 Upload Files", use_container_width=True):
                 with st.spinner("Uploading..."):
-                    result = api_upload(uploaded)
+                    result = api_upload(uploaded, api_key)
                 if result.get("success"):
                     st.success(f"✅ {result.get('files_uploaded', 0)} file(s) uploaded")
                     st.rerun()
@@ -307,7 +351,7 @@ def show_main_app():
         st.divider()
         
         # File List
-        files_data = api_list_files()
+        files_data = api_list_files(api_key)
         files = files_data.get("files", [])
         
         if files:
@@ -322,7 +366,7 @@ def show_main_app():
                         st.caption(info)
                     with col2:
                         if st.button("🗑️", key=f"del_{f['name']}", help="Delete file"):
-                            result = api_delete_file(f['name'])
+                            result = api_delete_file(f['name'], api_key)
                             if result.get("success"):
                                 st.rerun()
         else:
@@ -340,7 +384,7 @@ def show_main_app():
     st.markdown("## 🧠 LedgerMind")
     
     # File context indicator
-    files_data = api_list_files()
+    files_data = api_list_files(api_key)
     files = files_data.get("files", [])
     if files:
         file_names = [f['name'] for f in files[:3]]
@@ -381,7 +425,7 @@ def show_main_app():
         
         # Get response
         with st.spinner("Thinking..."):
-            result = api_query(prompt)
+            result = api_query(prompt, api_key)
         
         response = result.get("answer", "Sorry, I couldn't process that.")
         time_ms = result.get("processing_time_ms")
@@ -409,10 +453,33 @@ def show_main_app():
 # =============================================================================
 
 def main():
-    if st.session_state.logged_in:
-        show_main_app()
-    else:
-        show_login()
+    # Check if already logged in via session state
+    if st.session_state.get("logged_in"):
+        customer_id = st.session_state.get("customer_id")
+        api_key = st.session_state.get("api_key")
+        if customer_id and api_key:
+            show_main_app(customer_id, api_key)
+            return
+    
+    # Try to restore from saved session file
+    saved_customer_id, saved_api_key = load_saved_session()
+    
+    if saved_customer_id and saved_api_key:
+        # Validate the saved session
+        is_valid, _ = validate_login(saved_customer_id, saved_api_key)
+        if is_valid:
+            # Restore session
+            st.session_state.logged_in = True
+            st.session_state.customer_id = saved_customer_id
+            st.session_state.api_key = saved_api_key
+            show_main_app(saved_customer_id, saved_api_key)
+            return
+        else:
+            # Invalid saved session, clear it
+            clear_saved_session()
+    
+    # Show login screen
+    show_login()
 
 
 if __name__ == "__main__":
