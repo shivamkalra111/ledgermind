@@ -5,11 +5,11 @@ Single endpoint for ALL user queries.
 POST /api/v1/query - Ask anything, LLM decides how to handle it
 
 The LLM automatically determines if you're asking about:
-- Your financial data (sales, purchases, bank balance)
-- GST knowledge (rates, rules, filing dates)  
+- Your data (queries the user's uploaded tables)
+- Domain knowledge (GST rates, rules, etc. if configured)
 - Compliance checks
 - Table/data structure info
-- And anything else
+- General questions
 """
 
 import time
@@ -42,18 +42,15 @@ async def query(
     Ask anything - the AI figures out what to do.
     
     Examples:
-    - "What is my total sales in November?"
-    - "What is CGST?"
     - "Show me my tables"
-    - "Check my compliance"
-    - "What is the GST rate for laptops?"
-    - "When should I file GSTR-3B?"
-    - "Show me unpaid invoices"
+    - "What columns are in <table_name>?"
+    - "Total of <column> grouped by <another_column>"
+    - "Show me data from the last month"
     - "Analyze my data folder"
     
     The LLM automatically:
     1. Understands your intent
-    2. Routes to the right handler (data/knowledge/compliance/etc)
+    2. Routes to the right handler (data/knowledge/etc)
     3. Returns the response
     """
     customer_id, _ = customer

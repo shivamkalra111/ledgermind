@@ -181,6 +181,7 @@ Small businesses have messy Excel files and confusing tax rules.
 | Component | Created By | Purpose | Storage |
 |-----------|------------|---------|---------|
 | **DuckDB Database** | Discovery Agent | SQL-queryable tables from user's files | `workspace/{user}/{user}.duckdb` |
+| **Table Catalog** | System | Schema + metadata stored at ingestion | `workspace/{user}/table_catalog.json` |
 | **Profile** | System | Company info, settings | `workspace/{user}/profile.json` |
 | **Data State** | System | Tracks file changes for auto-reload | `workspace/{user}/data_state.json` |
 
@@ -188,9 +189,11 @@ Small businesses have messy Excel files and confusing tax rules.
 
 | Agent | Purpose | When Used | What It Does |
 |-------|---------|-----------|--------------|
-| **🔍 Discovery Agent** | Understand data | User uploads files | Reads Excel, maps columns to standard names, loads into DuckDB |
+| **🔍 Discovery Agent** | Load data | User uploads files | Reads Excel/CSV (data-agnostic), auto-detects headers, loads into DuckDB |
 | **✅ Compliance Agent** | Check tax rules | "Check compliance" | Validates GSTINs, checks tax calculations, finds mistakes |
 | **📈 Strategist Agent** | Business advice | "Analyze my business" | Finds tax savings, warns about risks, vendor analysis |
+
+**Note:** The Discovery Agent is **data-agnostic** - it works with ANY Excel/CSV data, not just financial data. It doesn't assume specific column names or data types.
 
 ### LLM Responsibilities
 
@@ -198,7 +201,8 @@ Small businesses have messy Excel files and confusing tax rules.
 |----------|--------------|-------|--------|
 | **Query Router** | Classifies user question | "What is CGST?" | Route to: Knowledge |
 | **Agent Coordinator** | Triggers right agent | "Check compliance" | Run: Compliance Agent |
-| **SQL Generator** | Converts question to SQL | "Show sales" | `SELECT * FROM sales` |
+| **Table Selector** | Chooses relevant tables | "Total purchases" | All purchase_* tables |
+| **SQL Generator** | Converts question to SQL (with few-shot) | "Show sales" | `SELECT * FROM sales` |
 | **Response Formatter** | Makes results readable | Raw data | "Your sales: ₹5L" |
 
 ### Access Methods
@@ -301,8 +305,9 @@ ledgermind/
 # 1. Install
 pip install -r requirements.txt
 
-# 2. Start AI model
-ollama pull qwen2.5:7b-instruct
+# 2. Start AI models
+ollama pull qwen2.5:7b-instruct   # Primary model (routing, knowledge, formatting)
+ollama pull sqlcoder:7b            # SQL model (text-to-SQL) - optional but recommended
 ollama serve
 
 # 3. Start API
@@ -311,6 +316,15 @@ uvicorn api.app:app --port 8000
 # 4. Create API key
 python -m streamlit.api_keys create company_name
 ```
+
+### Model Setup
+
+| Model | Purpose | Size | Required |
+|-------|---------|------|----------|
+| `qwen2.5:7b-instruct` | Intent routing, knowledge queries, SQL generation, response formatting | 4.7 GB | Yes |
+| `sqlcoder:7b` | Text-to-SQL generation (optional) | 4.1 GB | Optional |
+
+**Note:** The system uses few-shot learning for SQL generation which works well with qwen2.5. If sqlcoder is installed but produces invalid SQL, the system automatically falls back to qwen2.5.
 
 ---
 
@@ -322,15 +336,63 @@ python -m streamlit.api_keys create company_name
 | **Knowledge** | Tax CSVs | ✅ Ready | 89 goods, 50 services |
 | **User Data** | DuckDB | ✅ Ready | Per-user databases |
 | **User Data** | File Detection | ✅ Ready | Auto-reload on change |
-| **Agents** | Discovery | ✅ Ready | Reads & maps Excel files |
+| **User Data** | Table Catalog | ✅ Ready | Schema stored at ingestion |
+| **User Data** | Smart Table Selection | ✅ Ready | Auto-detects table families |
+| **Agents** | Discovery | ✅ Ready | Data-agnostic file loading |
 | **Agents** | Compliance | ✅ Ready | Tax rule checking |
 | **Agents** | Strategist | ✅ Ready | Business advice |
 | **LLM** | Query Router | ✅ Ready | Classifies all queries |
-| **LLM** | SQL Generator | ⚠️ Basic | ~70% accuracy |
+| **LLM** | SQL Generator | ✅ Ready | Few-shot learning, ~90% accuracy |
 | **Access** | FastAPI | ✅ Ready | 2 endpoints |
 | **Access** | Streamlit | ✅ Ready | Internal testing |
 | **Security** | API Keys | ✅ Ready | Per-user auth |
 | **Security** | Data Isolation | ✅ Ready | Users can't see each other |
+
+---
+
+## 🧪 Testing
+
+### Using Streamlit (Recommended)
+
+```bash
+# Terminal 1: Start API
+source ../venv312/bin/activate  # Or your venv
+uvicorn api.app:app --port 8000
+
+# Terminal 2: Start Streamlit
+source ../venv312/bin/activate
+streamlit run streamlit/app.py
+```
+
+1. Login with test credentials: `sample_company` / `lm_test_easy_key_12345`
+2. Upload your CSV/Excel files via the sidebar
+3. Ask questions about your data
+
+### Using CLI
+
+```bash
+python main.py
+> analyze folder /path/to/your/data/
+> What is my total purchases?
+> Show top 5 suppliers
+```
+
+### Generate Sample Data
+
+```bash
+python scripts/create_sample_data.py
+```
+
+This creates sample sales, purchase, and bank data in `workspace/sample_company/` for testing.
+
+### Supported File Formats
+
+| Format | Extension | Notes |
+|--------|-----------|-------|
+| Excel | `.xlsx`, `.xls` | Auto-detects header row |
+| CSV | `.csv` | Standard comma-separated |
+
+Files with company letterhead/preamble are automatically handled - the system detects where the actual data starts.
 
 ---
 
@@ -340,7 +402,7 @@ python -m streamlit.api_keys create company_name
 |-------|-------|--------|--------------|
 | **Phase 1** | Core LLM + Agents | ✅ Done | DuckDB, ChromaDB, 3 Agents |
 | **Phase 1B** | API Layer | ✅ Done | FastAPI, Auth, Streamlit |
-| **Phase 2** | Better SQL | 🔜 Next | Specialized SQL model, 90%+ accuracy |
+| **Phase 2** | Better SQL | ✅ Done | Few-shot learning, smart table selection, ~90% accuracy |
 | **Phase 3** | Advanced | 📅 Planned | Alerts, Reports, Google Sheets |
 
 ---

@@ -122,15 +122,14 @@ The router checks patterns first, then uses LLM if unclear.
         │
         ▼
 ┌─────────────────┐
-│ Get table       │
-│ schemas from    │
-│ DuckDB          │
+│ TableCatalog    │  Get schema from catalog (stored at ingestion)
+│ select_tables   │  Smart selection: detect table families
 └───────┬─────────┘
         │
         ▼
 ┌─────────────────┐
-│ LLM generates   │
-│ SQL query       │
+│ LLM generates   │  Uses few-shot learning
+│ SQL query       │  Handles UNION ALL for table families
 └───────┬─────────┘
         │
         ▼
@@ -141,20 +140,39 @@ The router checks patterns first, then uses LLM if unclear.
         │
         ▼
 ┌─────────────────┐
-│ LLM formats     │
-│ response        │
+│ Format response │
 └───────┬─────────┘
         │
         ▼
     Answer
 ```
 
+### Smart Table Selection
+
+When user asks "total of all purchases" and you have:
+- `purchase_2021_07`, `purchase_2021_08`, ..., `purchase_2022_01`
+
+The system:
+1. Detects these are a "table family" (same prefix)
+2. Includes ALL tables in the query
+3. Generates proper UNION ALL SQL
+
+### Few-Shot SQL Generation
+
+The LLM uses examples to learn patterns:
+- Aggregations: `SUM(amount) AS total`
+- Multi-table: `UNION ALL` for related tables
+- Filtering: `WHERE name LIKE '%value%'`
+- Grouping: `GROUP BY column ORDER BY total DESC`
+
 ### Key Files
 
 | File | Purpose |
 |------|---------|
 | `core/data_engine.py` | DuckDB operations |
-| `orchestration/workflow.py` | SQL generation via LLM |
+| `core/table_catalog.py` | Schema storage, table family detection |
+| `llm/client.py` | SQL generation with few-shot learning |
+| `orchestration/workflow.py` | Query handling |
 
 ---
 
@@ -199,7 +217,8 @@ Each customer gets:
 workspace/{customer_id}/
 ├── data/                  # Their Excel/CSV files
 ├── {customer_id}.duckdb   # Their database
-├── profile.json           # Metadata
+├── table_catalog.json     # Schema + metadata (stored at ingestion)
+├── profile.json           # Customer metadata
 └── data_state.json        # File change tracking
 ```
 
@@ -253,13 +272,14 @@ No manual "refresh data" needed.
 |------|-----------|
 | `orchestration/workflow.py` | **THE MAIN FILE** - LLM routing |
 | `orchestration/router.py` | Intent classification |
-| `llm/client.py` | Ollama connection |
+| `llm/client.py` | Ollama connection + few-shot SQL |
 
 ### Data Sources
 
 | File | One-liner |
 |------|-----------|
 | `core/data_engine.py` | DuckDB for customer data |
+| `core/table_catalog.py` | Schema storage, table selection |
 | `core/knowledge.py` | ChromaDB for GST rules |
 | `core/reference_data.py` | CSV lookups |
 
@@ -269,6 +289,14 @@ No manual "refresh data" needed.
 |------|-----------|
 | `core/customer.py` | Customer isolation |
 | `core/data_state.py` | File change detection |
+
+### Data Loading (Data-Agnostic)
+
+| File | One-liner |
+|------|-----------|
+| `agents/discovery.py` | File loading (any data type) |
+| `core/schema.py` | Deprecated - generic schemas only |
+| `core/mapper.py` | Deprecated - no longer used |
 
 ### API (Thin Wrapper)
 

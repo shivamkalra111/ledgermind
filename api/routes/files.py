@@ -177,11 +177,13 @@ async def delete_file(
     customer: Tuple[str, dict] = Depends(get_current_customer)
 ):
     """
-    Delete a file and its associated table.
+    Delete a file and all its associated data.
     
     This will:
     1. Delete the file from disk
     2. Drop the associated table from DuckDB
+    3. Remove from data_state.json
+    4. Remove from table_catalog.json (if exists)
     """
     customer_id, _ = customer
     
@@ -195,11 +197,11 @@ async def delete_file(
     table_name = file_path.stem.lower().replace(" ", "_").replace("-", "_")
     table_dropped = None
     
-    # Try to drop associated table
     try:
         manager = CustomerManager()
         ctx = manager.get_customer(customer_id)
         
+        # 1. Drop associated table from DuckDB
         engine = DataEngine(str(ctx.duckdb_path))
         tables = engine.list_tables()
         
@@ -208,11 +210,26 @@ async def delete_file(
             table_dropped = table_name
         
         engine.close()
+        
+        # 2. Remove from data_state.json
+        from core.data_state import DataStateManager
+        data_state_manager = DataStateManager(ctx)
+        data_state_manager.mark_file_deleted(filename)
+        data_state_manager.save()
+        
+        # 3. Remove from table_catalog.json (if exists)
+        from core.table_catalog import TableCatalog
+        catalog_path = ctx.root_dir
+        catalog = TableCatalog(catalog_path)
+        if table_name in catalog.tables:
+            catalog.remove_table(table_name)
+            catalog.save()
+            
     except Exception as e:
-        # Continue even if table drop fails
-        pass
+        # Log error but continue with file deletion
+        print(f"Warning: Error cleaning up metadata for {filename}: {e}")
     
-    # Delete the file
+    # 4. Delete the file from disk
     try:
         file_path.unlink()
     except Exception as e:

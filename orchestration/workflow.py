@@ -404,7 +404,7 @@ class AgentWorkflow:
         if not self._data_loaded:
             return "⚠️ No data loaded. Please analyze a folder first."
         
-        tables = self.data_engine.list_tables()
+        all_tables = self.data_engine.list_tables()
         
         if not query:
             return self._show_available_data()
@@ -414,33 +414,59 @@ class AgentWorkflow:
         if query_lower in ["data", "tables", "available", "available data", "what data"]:
             return self._show_available_data()
         
-        # Get table schemas for better SQL generation
-        schema_info = self._get_table_schemas(tables)
+        # Smart table selection using catalog (schema stored at ingestion time)
+        from core.table_catalog import TableCatalog, create_table_metadata
         
-        prompt = f"""You are a SQL expert. Convert this natural language question to a DuckDB SQL query.
-
-DATABASE SCHEMA:
-{schema_info}
-
-USER QUESTION: {query}
-
-RULES:
-1. Use ONLY the tables and columns listed above - look at the actual column names
-2. Return ONLY the raw SQL query - no explanations, no markdown, no backticks
-3. Column names with spaces MUST be quoted with double quotes
-4. Look at the sample data to understand date formats and use appropriate filtering
-5. For date columns that are VARCHAR, use LIKE patterns based on the format you see in sample data
-6. For date columns that are DATE type, use strftime() for filtering
-7. Query ONE table at a time - don't try to UNION different table structures
-8. For aggregations (SUM, COUNT, AVG), always give alias names
-9. Limit results to reasonable amounts (LIMIT 20) unless user asks for all
-10. Use the exact column names as shown in the schema
-
-SQL:"""
-
+        schema_info = None
+        relevant_tables = []
+        
+        if self._data_dir:
+            catalog = TableCatalog(self._data_dir.parent)  # workspace/customer_id/
+            
+            # Check if catalog has complete schema (columns populated)
+            catalog_complete = (
+                catalog.tables and 
+                any(len(t.columns) > 0 for t in catalog.tables.values())
+            )
+            
+            if catalog_complete:
+                # USE CATALOG - Schema was saved at ingestion time (EFFICIENT!)
+                relevant_tables = catalog.select_tables_with_llm(query, self.llm, max_tables=3)
+                schema_info = catalog.get_schema_for_tables(relevant_tables)
+            else:
+                # Catalog empty or incomplete - populate it from DuckDB (one-time cost)
+                # This happens on first query after data was loaded before catalog fix
+                for table in all_tables:
+                    if table not in catalog.tables or len(catalog.tables[table].columns) == 0:
+                        try:
+                            # Get filename from table name
+                            source_file = f"{table}.csv"  # Best guess
+                            metadata = create_table_metadata(
+                                table_name=table,
+                                source_file=source_file,
+                                data_engine=self.data_engine,
+                                llm_client=None,
+                                extract_stats=True
+                            )
+                            catalog.register_table(metadata)
+                        except Exception:
+                            pass
+                
+                # Save updated catalog
+                if catalog.tables:
+                    catalog.save()
+                    relevant_tables = catalog.select_tables_with_llm(query, self.llm, max_tables=3)
+                    schema_info = catalog.get_schema_for_tables(relevant_tables)
+        
+        # Fallback if catalog still doesn't work - build schema directly
+        if not schema_info:
+            # Use the _get_table_schemas method as last resort
+            relevant_tables = all_tables[:3]  # Just take first 3 tables
+            schema_info = self._get_table_schemas(relevant_tables)
+        
         try:
-            sql = self.llm.generate(prompt, max_tokens=300)
-            sql = self._clean_sql_response(sql)
+            # Use specialized SQL generation (uses sqlcoder if available)
+            sql = self.llm.generate_sql(query, schema_info)
             
             # Validate and execute
             if sql.upper().startswith("SELECT"):
@@ -453,7 +479,7 @@ SQL:"""
                     return f"**Query:** `{sql}`\n\n**Results ({len(result)} rows):**\n```\n{result.to_string(index=False)}\n```"
                 except Exception as db_error:
                     # Try to fix common SQL issues and retry
-                    fixed_result = self._try_fix_and_execute(sql, query, tables, str(db_error))
+                    fixed_result = self._try_fix_and_execute(sql, query, relevant_tables, str(db_error))
                     if fixed_result:
                         return fixed_result
                     # Show helpful error with available data
@@ -463,29 +489,6 @@ SQL:"""
                 
         except Exception as e:
             return f"❌ Query failed: {str(e)}"
-    
-    def _clean_sql_response(self, sql: str) -> str:
-        """Clean up LLM SQL response."""
-        sql = sql.strip()
-        
-        # Remove markdown code blocks
-        if sql.startswith("```"):
-            lines = sql.split("\n")
-            sql = "\n".join(line for line in lines if not line.startswith("```"))
-            sql = sql.strip()
-        
-        # Remove language hints
-        if sql.lower().startswith("sql"):
-            sql = sql[3:].strip()
-        
-        # Remove backticks
-        sql = sql.strip('`').strip()
-        
-        # Take only first statement
-        if ";" in sql:
-            sql = sql.split(";")[0].strip()
-        
-        return sql
     
     def _get_table_schemas(self, tables: list) -> str:
         """Get schema information for all tables."""
@@ -502,7 +505,8 @@ SQL:"""
                 sample = self.data_engine.query(f"SELECT * FROM {table} LIMIT 3")
                 
                 schema_parts.append(f"TABLE: {table}")
-                schema_parts.append(f"  Columns: {', '.join(f'\"{c}\" ({t})' for c, t in zip(columns, types))}")
+                col_strs = [f'"{c}" ({t})' for c, t in zip(columns, types)]
+                schema_parts.append(f"  Columns: {', '.join(col_strs)}")
                 
                 # Show sample data for context
                 if len(sample) > 0:
@@ -524,24 +528,32 @@ SQL:"""
     def _try_fix_and_execute(self, original_sql: str, query: str, tables: list, error: str) -> Optional[str]:
         """Try to fix common SQL issues and re-execute."""
         
+        # Get schema for context (tables already filtered to relevant ones)
+        # Use catalog if available, otherwise build directly
+        from core.table_catalog import TableCatalog
+        
+        schema_info = None
+        if self._data_dir:
+            catalog = TableCatalog(self._data_dir.parent)
+            if catalog.tables:
+                schema_info = catalog.get_schema_for_tables(tables)
+        
+        if not schema_info:
+            schema_info = self._get_table_schemas(tables)
+        
         # Ask LLM to fix the SQL based on the error
-        fix_prompt = f"""The following SQL query failed with an error. Fix it.
+        fix_prompt = f"""Fix this SQL query that failed.
 
 ORIGINAL SQL: {original_sql}
-
 ERROR: {error}
 
-RULES:
-1. Return ONLY the fixed SQL - no explanations
-2. If the error is about column names, check for typos or missing quotes
-3. If the error is about date functions, try using LIKE patterns instead
-4. If the error is about missing tables, use an available table
+{schema_info}
 
-FIXED SQL:"""
+Return ONLY the corrected SQL query."""
         
         try:
-            fixed_sql = self.llm.generate(fix_prompt, max_tokens=300)
-            fixed_sql = self._clean_sql_response(fixed_sql)
+            # Use SQL model for fixing too
+            fixed_sql = self.llm.generate_sql(fix_prompt, schema_info)
             
             if fixed_sql.upper().startswith("SELECT") and fixed_sql != original_sql:
                 result = self.data_engine.query(fixed_sql)

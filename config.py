@@ -48,9 +48,19 @@ STATE_CODES_FILE = INDIA_DIR / "state_codes.csv"
 # =============================================================================
 
 OLLAMA_BASE_URL = "http://localhost:11434"
+
+# Primary model - for intent routing, knowledge queries, response formatting
 LLM_MODEL = "qwen2.5:7b-instruct"
+
+# SQL model - specialized for text-to-SQL generation (optional, uses LLM_MODEL if not set)
+# Download with: ollama pull sqlcoder:7b
+SQL_MODEL = "sqlcoder:7b"  # Set to None to use LLM_MODEL for everything
+
+# Model settings
 LLM_TEMPERATURE = 0.1  # Low temperature for factual responses
+SQL_TEMPERATURE = 0.0  # Even lower for SQL (deterministic)
 LLM_MAX_TOKENS = 1024
+SQL_MAX_TOKENS = 500   # SQL queries are shorter
 LLM_TIMEOUT = 120  # seconds
 
 # =============================================================================

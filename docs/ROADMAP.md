@@ -2,8 +2,8 @@
 
 > The LLM is the product. Everything else is plumbing.
 
-**Last Updated:** January 2026  
-**Current Phase:** 1B Complete ✅
+**Last Updated:** February 2026  
+**Current Phase:** Phase 2 Complete ✅
 
 ---
 
@@ -38,15 +38,15 @@ API is just a delivery mechanism. Not the focus.
 ## Phase Overview
 
 ```
-DONE ✅                DONE ✅                    NEXT
-   │                      │                        │
-   ▼                      ▼                        ▼
+DONE ✅                DONE ✅               DONE ✅                 NEXT
+   │                      │                     │                      │
+   ▼                      ▼                     ▼                      ▼
 ┌──────────┐       ┌──────────┐       ┌──────────┐       ┌──────────┐
 │ Phase 1  │       │ Phase 1B │       │ Phase 2  │       │ Phase 3  │
 │          │       │          │       │          │       │          │
 │ LLM Core │──────▶│ API +    │──────▶│ Better   │──────▶│ Advanced │
-│          │       │ Delivery │       │ LLM      │       │ Features │
-│ DONE ✅  │       │ DONE ✅  │       │ NEXT     │       │ PLANNED  │
+│          │       │ Delivery │       │ SQL      │       │ Features │
+│ DONE ✅  │       │ DONE ✅  │       │ DONE ✅  │       │ PLANNED  │
 └──────────┘       └──────────┘       └──────────┘       └──────────┘
 ```
 
@@ -138,27 +138,59 @@ POST /api/v1/query
 
 ---
 
-## Phase 2: Better LLM ◀── NEXT
+## Phase 2: Better SQL ✅ COMPLETE
 
-**Goal:** Improve LLM accuracy, especially for SQL.
+**Goal:** Improve LLM accuracy for SQL generation.
 
-| Feature | Description | Priority |
-|---------|-------------|----------|
-| **SQL Model** | Use `sqlcoder` for data queries | P0 |
-| **Query Templates** | Few-shot examples for common queries | P1 |
-| **Error Recovery** | Auto-fix failed SQL queries | P1 |
-| **Caching** | Cache frequent queries | P2 |
+| Feature | Description | Status |
+|---------|-------------|--------|
+| **Few-Shot Learning** | Examples for common SQL patterns | ✅ Implemented |
+| **Smart Table Selection** | Detect table families, include all related | ✅ Implemented |
+| **Data-Agnostic Loading** | Works with ANY data, not just financial | ✅ Implemented |
+| **SQL Validation** | Auto-fallback if SQL model fails | ✅ Implemented |
+| **Error Recovery** | Auto-fix failed SQL queries | ✅ Implemented |
+| **Table Catalog** | Schema stored at ingestion time | ✅ Implemented |
 
-### SQL Accuracy Problem
+### Few-Shot SQL Generation
 
-Current: General LLM (qwen2.5) generates SQL
-- Works ~70% of the time
-- Fails on complex joins, date filtering
+The system now uses few-shot learning for SQL generation:
 
-Phase 2: Specialized SQL model
-- `sqlcoder` or `defog/sqlcoder-7b`
-- Pre-trained on Text-to-SQL
-- Expected: 90%+ accuracy
+```python
+# Few-shot examples teach the model patterns like:
+# - UNION ALL for multiple related tables
+# - GROUP BY with proper column selection
+# - LIKE for text filtering
+```
+
+**Key improvements:**
+1. When user asks "total of all purchases" → System finds ALL purchase_* tables
+2. When tables are related (same prefix) → Automatically combines with UNION ALL
+3. When SQL model (sqlcoder) produces invalid SQL → Falls back to qwen2.5
+
+### Smart Table Selection
+
+```python
+# Table family detection:
+# purchase_2021_07, purchase_2021_08, ... → family "purchase_"
+
+# Query: "What is the total of all purchases?"
+# Result: ALL tables in the "purchase_" family are queried
+```
+
+### Data-Agnostic Architecture
+
+The data loading layer is now completely data-agnostic:
+- No hardcoded column names (like "supplier_name", "total_amount")
+- No assumed data types (like "sales", "purchases", "bank")
+- LLM understands columns from names + sample data
+- Works with ANY Excel/CSV data
+
+**Files updated:**
+- `core/table_catalog.py`: Generic metadata, no data-type assumptions
+- `agents/discovery.py`: Data-agnostic file loading
+- `core/schema.py`: Deprecated SDM mappings
+- `core/mapper.py`: Deprecated header mapping
+- `llm/client.py`: Few-shot SQL generation with validation
 
 ---
 

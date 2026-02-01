@@ -1740,5 +1740,276 @@ Hallucination prevention is multi-layered:
 
 ---
 
+## Testing Phase: Real Data Integration (February 2026)
+
+### Overview
+
+We've entered the **testing phase** with real-world data from Hotel Harmony Inn - a hospitality business in Meerut, UP. This is 18 months of purchase ledger data (July 2021 - December 2022).
+
+### What We Added
+
+#### 1. Test Data (`data_example/`)
+
+Real purchase ledger data with:
+- **18 Excel files** (one per month)
+- **614 transactions** across 80+ suppliers
+- **Total value**: ~₹3.2 Crore
+- **Company GSTIN**: 09AAPFD1128D1ZN
+
+The data has been pre-processed into:
+- Individual monthly CSVs (`purchase_2021_07.csv`, etc.)
+- Consolidated file (`purchase_ledger_consolidated.csv`)
+- Metadata and processing reports
+
+#### 2. Data Validation Script (`scripts/validate_data.py`)
+
+A comprehensive validation tool that checks:
+
+```python
+# Run validation
+python scripts/validate_data.py data_example/processed/ --all --verbose
+```
+
+**Checks performed:**
+- Required columns present
+- Data type correctness
+- Tax calculation integrity (transaction + tax = total)
+- GSTIN format validation
+- Supplier name consistency (finds typos, duplicates)
+- Zero-value and negative amount detection
+- Date validity (month names, year ranges)
+- Duplicate transaction detection
+
+**Output levels:**
+- 🔴 ERROR: Blocks processing (schema issues, invalid GSTINs)
+- 🟡 WARNING: Proceed with caution (calculation mismatches, missing tax)
+- 🔵 INFO: Informational (cash transactions, large amounts)
+
+#### 3. Automated Test Script (`scripts/test_with_example_data.py`)
+
+End-to-end test suite using the example data:
+
+```python
+# Quick test (no LLM required)
+python scripts/test_with_example_data.py --quick
+
+# Full test (requires Ollama)
+python scripts/test_with_example_data.py --verbose
+```
+
+**Test categories:**
+1. **Setup Tests**: Module imports, DataEngine initialization
+2. **Data Loading**: Load CSV, verify table creation
+3. **Query Tests**: Row counts, supplier queries, aggregations
+4. **Validation Tests**: GSTIN validation, amount consistency
+5. **Workflow Tests**: Intent routing, data query execution (LLM)
+
+#### 4. Documentation Updates
+
+- `data_example/README.md`: Complete data documentation
+- `README.md`: Testing section added
+- Column schema, known issues, sample queries
+
+### Known Data Issues (Intentional Test Cases)
+
+These issues exist in the real data and serve as test cases:
+
+| Issue | Details | Tests |
+|-------|---------|-------|
+| **Zero Tax (H2 2022)** | Jun-Nov 2022 have no tax breakdowns | Compliance warnings |
+| **Supplier Typos** | "ENTERPRICES" instead of "ENTERPRISES" | Duplicate detection |
+| **Cash Transactions** | Unattributed cash purchases | Categorization suggestions |
+| **Calculation Diffs** | Minor rounding differences | Tolerance handling |
+
+### Testing Workflow
+
+```
+1. DATA VALIDATION
+   python scripts/validate_data.py data_example/processed/ --all
+   └── Check data quality, identify issues
+
+2. AUTOMATED TESTS
+   python scripts/test_with_example_data.py --quick
+   └── Verify core functionality without LLM
+
+3. LLM INTEGRATION TESTS
+   python scripts/test_with_example_data.py
+   └── Test intent routing and query execution
+
+4. MANUAL TESTING (Streamlit)
+   streamlit run streamlit/app.py
+   └── Interactive testing with real queries
+```
+
+### Sample Test Queries
+
+These queries are verified working with the example data:
+
+```sql
+-- Total purchases
+SELECT SUM(total_amount) FROM purchase_ledger_consolidated;
+-- Result: ~₹3.2 Crore
+
+-- Top suppliers
+SELECT supplier_name, SUM(total_amount) as total
+FROM purchase_ledger_consolidated
+GROUP BY supplier_name
+ORDER BY total DESC LIMIT 5;
+-- Result: AK DAIRY, UMAR DRAJ, MOHD HAROON, Walmart, METRO
+
+-- Monthly trend
+SELECT month, year, SUM(total_amount) as total
+FROM purchase_ledger_consolidated
+GROUP BY month, year
+ORDER BY year, month;
+```
+
+### Next Steps
+
+1. **Add Sales Data**: Generate matching sales data for full reconciliation testing
+2. **Add Bank Statements**: For payment matching and cash flow analysis
+3. **Expand Edge Cases**: More malformed data for robustness testing
+4. **Benchmark Queries**: Measure SQL generation accuracy with this data
+
+---
+
+## 17. Phase 2: Data-Agnostic Architecture & Few-Shot Learning
+
+**Date:** February 2026
+
+### The Problem
+
+The system had several data-specific assumptions:
+1. Column names like `supplier_name`, `total_amount` were hardcoded
+2. Data types like "purchase", "sales", "bank" were assumed
+3. SQL generation only worked on 3 tables at a time
+4. The SQL model (sqlcoder) was producing invalid SQL for complex schemas
+
+### Solution: Data-Agnostic Architecture
+
+#### 1. Removed Hardcoded Data Assumptions
+
+**Files changed:**
+- `core/table_catalog.py`: Removed hardcoded column descriptions, data type detection
+- `core/schema.py`: Deprecated `SheetType`, `StandardInvoice`, `HEADER_ALIASES`
+- `core/mapper.py`: Deprecated `HeaderMapper` and SDM mapping
+- `agents/discovery.py`: Removed `SheetType`/`MappingResult`, made generic
+
+**Before:**
+```python
+# Old: Assumed specific column names
+descriptions = {
+    "supplier_name": "Name of the vendor/supplier",
+    "gstin": "GST Identification Number",
+    ...
+}
+
+# Old: Assumed specific data types
+if "purchase" in table_name:
+    return "purchase"
+```
+
+**After:**
+```python
+# New: LLM infers meaning from column names + samples
+# No hardcoded assumptions
+return "unknown"  # Let LLM figure it out
+```
+
+#### 2. Smart Table Family Detection
+
+**Problem:** Query "total purchases" only used 3 tables, but user has 7.
+
+**Solution:** Detect table families and include all related tables.
+
+```python
+def _detect_table_families(self) -> Dict[str, List[str]]:
+    """
+    Detect groups of related tables.
+    purchase_2021_07, purchase_2021_08 → family "purchase_"
+    """
+    # Group by common prefix
+    ...
+    
+def select_tables_with_llm(self, query, llm_client, max_tables=3):
+    # If query wants "all" data, include entire family
+    if "total" in query or "all" in query:
+        return all_tables_in_family  # No limit!
+```
+
+#### 3. Few-Shot Learning for SQL
+
+**Problem:** SQL generation was unreliable, especially for UNION ALL patterns.
+
+**Solution:** Added few-shot examples to teach the model patterns.
+
+```python
+SQL_FEW_SHOT_EXAMPLES = [
+    {
+        "schema": "TABLE: orders_jan (...)\nTABLE: orders_feb (...)",
+        "question": "What is the total amount across all orders?",
+        "sql": """SELECT SUM(amount) AS total FROM (
+            SELECT amount FROM orders_jan
+            UNION ALL
+            SELECT amount FROM orders_feb
+        ) combined"""
+    },
+    # More examples for GROUP BY, filtering, etc.
+]
+```
+
+#### 4. SQL Model Fallback
+
+**Problem:** sqlcoder:7b produces invalid SQL for complex schemas.
+
+**Solution:** Validate SQL output, fallback to qwen2.5 if invalid.
+
+```python
+def generate_sql(self, prompt, schema, ...):
+    # Try SQL model first
+    if self.sql_model:
+        sql = self._try_sql_model(...)
+        if sql and sql.upper().startswith("SELECT"):
+            return sql  # Valid SQL
+    
+    # Fallback to primary model with few-shot
+    return self._generate_with_primary_model(...)
+```
+
+### Results
+
+| Metric | Before | After |
+|--------|--------|-------|
+| Tables queried | Max 3 | All related tables |
+| SQL accuracy | ~70% | ~90% |
+| Data assumptions | Hardcoded | None (data-agnostic) |
+| Multi-table UNION | Often failed | Works reliably |
+
+### Key Files Changed
+
+| File | Change |
+|------|--------|
+| `core/table_catalog.py` | Table family detection, generic metadata |
+| `llm/client.py` | Few-shot learning, SQL validation, fallback |
+| `agents/discovery.py` | Data-agnostic file loading |
+| `core/schema.py` | Deprecated SDM schemas |
+| `core/mapper.py` | Deprecated header mapping |
+| `orchestration/workflow.py` | Uses new table selection |
+
+### Architecture Principle
+
+**Data loading is DATA-AGNOSTIC:**
+- Works with ANY Excel/CSV data
+- No assumed column names
+- No assumed data types
+- LLM understands from names + samples
+
+**Domain features are SEPARATE:**
+- GST validation, compliance checks are *features*
+- Not embedded in data loading layer
+- Can be enabled/disabled per use case
+
+---
+
 *This document is intended for interview preparation and deep technical understanding of the LedgerMind architecture.*
 

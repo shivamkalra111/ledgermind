@@ -1,11 +1,13 @@
 # Upload Route
 """
-File upload endpoint for customers to upload their financial data.
+File upload endpoint for customers to upload their data.
 
 POST /api/v1/upload
 - Accepts multiple Excel/CSV files
-- Auto-detects file types and creates DuckDB tables
+- Auto-detects headers and creates DuckDB tables
 - Uses smart loading (only processes new/changed files)
+
+NOTE: This endpoint is DATA-AGNOSTIC - it does not assume specific data types.
 """
 
 import os
@@ -97,7 +99,7 @@ async def upload_files(
             errors=errors
         )
     
-    # Load data into DuckDB
+    # Load data into DuckDB and populate table catalog
     tables_created = []
     try:
         # Get customer context and trigger data loading
@@ -106,30 +108,61 @@ async def upload_files(
         ctx.ensure_exists()
         
         # Get data state manager for smart loading
-        data_state_manager = DataStateManager(ctx.root_dir)
-        data_state = data_state_manager.get_current_state()
+        data_state_manager = DataStateManager(ctx)
         
-        # Check what changed
-        changes = data_state_manager.get_changes()
+        # Get files that need to be loaded
+        from core.data_engine import DataEngine
+        engine = DataEngine(str(ctx.duckdb_path))
         
-        if changes["new"] or changes["modified"]:
-            # Load new/changed files
-            from core.data_engine import DataEngine
-            engine = DataEngine(str(ctx.duckdb_path))
-            
-            for file_path in changes["new"] + changes["modified"]:
+        # Initialize table catalog for storing schema (IMPORTANT for efficient querying)
+        from core.table_catalog import TableCatalog, create_table_metadata
+        catalog = TableCatalog(ctx.root_dir)
+        
+        existing_tables = engine.list_tables()
+        files_to_load = data_state_manager.get_files_to_load(existing_tables)
+        
+        if files_to_load:
+            for filename, file_path, change_type in files_to_load:
                 try:
-                    engine.load_file(file_path)
+                    table_name = engine.load_file(file_path)
+                    
+                    # Get row count for tracking
+                    info = engine.get_table_info(table_name)
+                    row_count = info.get("row_count", 0)
+                    
+                    # Mark file as loaded in data state
+                    data_state_manager.mark_file_loaded(
+                        filename=filename,
+                        table_name=table_name,
+                        row_count=row_count
+                    )
+                    
+                    # IMPORTANT: Save schema to table catalog (so we don't query DuckDB every time)
+                    try:
+                        metadata = create_table_metadata(
+                            table_name=table_name,
+                            source_file=filename,
+                            data_engine=engine,
+                            llm_client=None,  # No LLM needed for basic metadata
+                            extract_stats=True
+                        )
+                        catalog.register_table(metadata)
+                    except Exception as catalog_err:
+                        # Log but don't fail upload if catalog fails
+                        print(f"Warning: Could not add {table_name} to catalog: {catalog_err}")
+                    
+                    tables_created.append(table_name)
+                    
                 except Exception as e:
-                    errors.append(f"Failed to load {Path(file_path).name}: {str(e)}")
-            
-            # Get tables
-            tables_created = engine.list_tables()
+                    errors.append(f"Failed to load {filename}: {str(e)}")
             
             # Save data state
-            data_state_manager.save_state()
+            data_state_manager.save()
             
-            engine.close()
+            # Save table catalog (schema persisted for efficient queries)
+            catalog.save()
+        
+        engine.close()
     
     except Exception as e:
         errors.append(f"Data processing error: {str(e)}")

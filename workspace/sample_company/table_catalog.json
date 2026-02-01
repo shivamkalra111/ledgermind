@@ -1,0 +1,1161 @@
+{
+  "version": "1.0",
+  "updated_at": "2026-02-01T13:21:54.508932",
+  "tables": {
+    "purchase_2021_07": {
+      "table_name": "purchase_2021_07",
+      "source_file": "purchase_2021_07.csv",
+      "columns": [
+        {
+          "name": "supplier_name",
+          "type": "VARCHAR",
+          "description": ""
+        },
+        {
+          "name": "payment_days",
+          "type": "DOUBLE",
+          "description": ""
+        },
+        {
+          "name": "transaction_amount",
+          "type": "DOUBLE",
+          "description": ""
+        },
+        {
+          "name": "discount_amount",
+          "type": "DOUBLE",
+          "description": ""
+        },
+        {
+          "name": "other_charges",
+          "type": "DOUBLE",
+          "description": ""
+        },
+        {
+          "name": "tax_amount",
+          "type": "DOUBLE",
+          "description": ""
+        },
+        {
+          "name": "excise_amount",
+          "type": "DOUBLE",
+          "description": ""
+        },
+        {
+          "name": "total_amount",
+          "type": "DOUBLE",
+          "description": ""
+        },
+        {
+          "name": "month",
+          "type": "VARCHAR",
+          "description": ""
+        },
+        {
+          "name": "year",
+          "type": "BIGINT",
+          "description": ""
+        },
+        {
+          "name": "source_file",
+          "type": "VARCHAR",
+          "description": ""
+        },
+        {
+          "name": "company_gstin",
+          "type": "VARCHAR",
+          "description": ""
+        },
+        {
+          "name": "period_date",
+          "type": "DATE",
+          "description": ""
+        }
+      ],
+      "row_count": 32,
+      "description": "Data from 2021",
+      "keywords": [
+        "source",
+        "period",
+        "supplier",
+        "days",
+        "name",
+        "date",
+        "file",
+        "company",
+        "month",
+        "total",
+        "2021",
+        "payment",
+        "transaction",
+        "amount",
+        "excise"
+      ],
+      "data_type": "unknown",
+      "sample_rows": [
+        {
+          "supplier_name": "UMAR DRAJ",
+          "payment_days": 0.0,
+          "transaction_amount": 318386.01499999996,
+          "discount_amount": 0.0,
+          "other_charges": 0.0,
+          "tax_amount": 0.0,
+          "excise_amount": 0.0,
+          "total_amount": 318391.0,
+          "month": "July",
+          "year": 2021,
+          "source_file": "july 2021.xls",
+          "company_gstin": "09AAPFD1128D1ZN",
+          "period_date": "2021-07-01T00:00:00"
+        },
+        {
+          "supplier_name": "CASH",
+          "payment_days": 0.0,
+          "transaction_amount": 42663.998,
+          "discount_amount": 0.0,
+          "other_charges": 0.0,
+          "tax_amount": 0.0,
+          "excise_amount": 0.0,
+          "total_amount": 42664.0,
+          "month": "July",
+          "year": 2021,
+          "source_file": "july 2021.xls",
+          "company_gstin": "09AAPFD1128D1ZN",
+          "period_date": "2021-07-01T00:00:00"
+        },
+        {
+          "supplier_name": "ANUPAM MARKETING",
+          "payment_days": 0.0,
+          "transaction_amount": 42255.0,
+          "discount_amount": 0.0,
+          "other_charges": 0.0,
+          "tax_amount": 0.0,
+          "excise_amount": 0.0,
+          "total_amount": 42255.0,
+          "month": "July",
+          "year": 2021,
+          "source_file": "july 2021.xls",
+          "company_gstin": "09AAPFD1128D1ZN",
+          "period_date": "2021-07-01T00:00:00"
+        }
+      ],
+      "date_range": {
+        "date_column": "period_date",
+        "min_date": "2021-07-01",
+        "max_date": "2021-07-01",
+        "period_description": "July 2021"
+      },
+      "statistics": {
+        "unique_counts": {
+          "supplier_name": 32,
+          "month": 1
+        },
+        "null_percentages": {},
+        "numeric_sums": {
+          "payment_days": 0.0,
+          "transaction_amount": 2960481.6569999997
+        }
+      },
+      "example_queries": [
+        "Total of payment_days",
+        "Sum of payment_days by supplier_name",
+        "Count by supplier_name",
+        "Trend of payment_days over time",
+        "Show all data from purchase_2021_07"
+      ],
+      "related_tables": [],
+      "created_at": "2026-02-01T13:21:54.488117",
+      "updated_at": "2026-02-01T13:21:54.488128"
+    },
+    "purchase_2021_10": {
+      "table_name": "purchase_2021_10",
+      "source_file": "purchase_2021_10.csv",
+      "columns": [
+        {
+          "name": "supplier_name",
+          "type": "VARCHAR",
+          "description": ""
+        },
+        {
+          "name": "payment_days",
+          "type": "DOUBLE",
+          "description": ""
+        },
+        {
+          "name": "transaction_amount",
+          "type": "DOUBLE",
+          "description": ""
+        },
+        {
+          "name": "discount_amount",
+          "type": "DOUBLE",
+          "description": ""
+        },
+        {
+          "name": "other_charges",
+          "type": "DOUBLE",
+          "description": ""
+        },
+        {
+          "name": "tax_amount",
+          "type": "DOUBLE",
+          "description": ""
+        },
+        {
+          "name": "excise_amount",
+          "type": "DOUBLE",
+          "description": ""
+        },
+        {
+          "name": "total_amount",
+          "type": "DOUBLE",
+          "description": ""
+        },
+        {
+          "name": "month",
+          "type": "VARCHAR",
+          "description": ""
+        },
+        {
+          "name": "year",
+          "type": "BIGINT",
+          "description": ""
+        },
+        {
+          "name": "source_file",
+          "type": "VARCHAR",
+          "description": ""
+        },
+        {
+          "name": "company_gstin",
+          "type": "VARCHAR",
+          "description": ""
+        },
+        {
+          "name": "period_date",
+          "type": "DATE",
+          "description": ""
+        }
+      ],
+      "row_count": 28,
+      "description": "Data from 2021",
+      "keywords": [
+        "source",
+        "period",
+        "supplier",
+        "days",
+        "name",
+        "date",
+        "file",
+        "company",
+        "month",
+        "total",
+        "2021",
+        "payment",
+        "transaction",
+        "amount",
+        "excise"
+      ],
+      "data_type": "unknown",
+      "sample_rows": [
+        {
+          "supplier_name": "UMAR DRAJ",
+          "payment_days": 0.0,
+          "transaction_amount": 340891.10800000007,
+          "discount_amount": 0.0,
+          "other_charges": 0.0,
+          "tax_amount": 0.0,
+          "excise_amount": 0.0,
+          "total_amount": 340887.0,
+          "month": "October",
+          "year": 2021,
+          "source_file": "october 2021.xls",
+          "company_gstin": "09AAPFD1128D1ZN",
+          "period_date": "2021-10-01T00:00:00"
+        },
+        {
+          "supplier_name": "CASH",
+          "payment_days": 0.0,
+          "transaction_amount": 32269.0,
+          "discount_amount": 0.0,
+          "other_charges": 0.0,
+          "tax_amount": 0.0,
+          "excise_amount": 0.0,
+          "total_amount": 32269.0,
+          "month": "October",
+          "year": 2021,
+          "source_file": "october 2021.xls",
+          "company_gstin": "09AAPFD1128D1ZN",
+          "period_date": "2021-10-01T00:00:00"
+        },
+        {
+          "supplier_name": "ANUPAM MARKETING",
+          "payment_days": 0.0,
+          "transaction_amount": 31590.0,
+          "discount_amount": 0.0,
+          "other_charges": 0.0,
+          "tax_amount": 0.0,
+          "excise_amount": 0.0,
+          "total_amount": 31590.0,
+          "month": "October",
+          "year": 2021,
+          "source_file": "october 2021.xls",
+          "company_gstin": "09AAPFD1128D1ZN",
+          "period_date": "2021-10-01T00:00:00"
+        }
+      ],
+      "date_range": {
+        "date_column": "period_date",
+        "min_date": "2021-10-01",
+        "max_date": "2021-10-01",
+        "period_description": "October 2021"
+      },
+      "statistics": {
+        "unique_counts": {
+          "supplier_name": 28,
+          "month": 1
+        },
+        "null_percentages": {},
+        "numeric_sums": {
+          "payment_days": 0.0,
+          "transaction_amount": 3267075.037
+        }
+      },
+      "example_queries": [
+        "Total of payment_days",
+        "Sum of payment_days by supplier_name",
+        "Count by supplier_name",
+        "Trend of payment_days over time",
+        "Show all data from purchase_2021_10"
+      ],
+      "related_tables": [],
+      "created_at": "2026-02-01T13:21:54.500722",
+      "updated_at": "2026-02-01T13:21:54.500731"
+    },
+    "purchase_2021_09": {
+      "table_name": "purchase_2021_09",
+      "source_file": "purchase_2021_09.csv",
+      "columns": [
+        {
+          "name": "supplier_name",
+          "type": "VARCHAR",
+          "description": ""
+        },
+        {
+          "name": "payment_days",
+          "type": "DOUBLE",
+          "description": ""
+        },
+        {
+          "name": "transaction_amount",
+          "type": "DOUBLE",
+          "description": ""
+        },
+        {
+          "name": "discount_amount",
+          "type": "DOUBLE",
+          "description": ""
+        },
+        {
+          "name": "other_charges",
+          "type": "DOUBLE",
+          "description": ""
+        },
+        {
+          "name": "tax_amount",
+          "type": "DOUBLE",
+          "description": ""
+        },
+        {
+          "name": "excise_amount",
+          "type": "DOUBLE",
+          "description": ""
+        },
+        {
+          "name": "total_amount",
+          "type": "DOUBLE",
+          "description": ""
+        },
+        {
+          "name": "month",
+          "type": "VARCHAR",
+          "description": ""
+        },
+        {
+          "name": "year",
+          "type": "BIGINT",
+          "description": ""
+        },
+        {
+          "name": "source_file",
+          "type": "VARCHAR",
+          "description": ""
+        },
+        {
+          "name": "company_gstin",
+          "type": "VARCHAR",
+          "description": ""
+        },
+        {
+          "name": "period_date",
+          "type": "DATE",
+          "description": ""
+        }
+      ],
+      "row_count": 33,
+      "description": "Data from 2021",
+      "keywords": [
+        "source",
+        "period",
+        "supplier",
+        "days",
+        "name",
+        "date",
+        "file",
+        "company",
+        "month",
+        "total",
+        "2021",
+        "payment",
+        "transaction",
+        "amount",
+        "excise"
+      ],
+      "data_type": "unknown",
+      "sample_rows": [
+        {
+          "supplier_name": "UMAR DRAJ",
+          "payment_days": 0.0,
+          "transaction_amount": 278589.9060000001,
+          "discount_amount": 0.0,
+          "other_charges": 0.0,
+          "tax_amount": 0.0,
+          "excise_amount": 0.0,
+          "total_amount": 278595.0,
+          "month": "September",
+          "year": 2021,
+          "source_file": "september 2021.xls",
+          "company_gstin": "09AAPFD1128D1ZN",
+          "period_date": "2021-09-01T00:00:00"
+        },
+        {
+          "supplier_name": "CASH",
+          "payment_days": 0.0,
+          "transaction_amount": 33710.0,
+          "discount_amount": 0.0,
+          "other_charges": 0.0,
+          "tax_amount": 0.0,
+          "excise_amount": 0.0,
+          "total_amount": 33710.0,
+          "month": "September",
+          "year": 2021,
+          "source_file": "september 2021.xls",
+          "company_gstin": "09AAPFD1128D1ZN",
+          "period_date": "2021-09-01T00:00:00"
+        },
+        {
+          "supplier_name": "ANUPAM MARKETING",
+          "payment_days": 0.0,
+          "transaction_amount": 41904.0,
+          "discount_amount": 0.0,
+          "other_charges": 0.0,
+          "tax_amount": 0.0,
+          "excise_amount": 0.0,
+          "total_amount": 41904.0,
+          "month": "September",
+          "year": 2021,
+          "source_file": "september 2021.xls",
+          "company_gstin": "09AAPFD1128D1ZN",
+          "period_date": "2021-09-01T00:00:00"
+        }
+      ],
+      "date_range": {
+        "date_column": "period_date",
+        "min_date": "2021-09-01",
+        "max_date": "2021-09-01",
+        "period_description": "September 2021"
+      },
+      "statistics": {
+        "unique_counts": {
+          "supplier_name": 33,
+          "month": 1
+        },
+        "null_percentages": {},
+        "numeric_sums": {
+          "payment_days": 0.0,
+          "transaction_amount": 2291717.688
+        }
+      },
+      "example_queries": [
+        "Total of payment_days",
+        "Sum of payment_days by supplier_name",
+        "Count by supplier_name",
+        "Trend of payment_days over time",
+        "Show all data from purchase_2021_09"
+      ],
+      "related_tables": [],
+      "created_at": "2026-02-01T13:21:54.496712",
+      "updated_at": "2026-02-01T13:21:54.496721"
+    },
+    "purchase_2021_08": {
+      "table_name": "purchase_2021_08",
+      "source_file": "purchase_2021_08.csv",
+      "columns": [
+        {
+          "name": "supplier_name",
+          "type": "VARCHAR",
+          "description": ""
+        },
+        {
+          "name": "payment_days",
+          "type": "DOUBLE",
+          "description": ""
+        },
+        {
+          "name": "transaction_amount",
+          "type": "DOUBLE",
+          "description": ""
+        },
+        {
+          "name": "discount_amount",
+          "type": "DOUBLE",
+          "description": ""
+        },
+        {
+          "name": "other_charges",
+          "type": "DOUBLE",
+          "description": ""
+        },
+        {
+          "name": "tax_amount",
+          "type": "DOUBLE",
+          "description": ""
+        },
+        {
+          "name": "excise_amount",
+          "type": "DOUBLE",
+          "description": ""
+        },
+        {
+          "name": "total_amount",
+          "type": "DOUBLE",
+          "description": ""
+        },
+        {
+          "name": "month",
+          "type": "VARCHAR",
+          "description": ""
+        },
+        {
+          "name": "year",
+          "type": "BIGINT",
+          "description": ""
+        },
+        {
+          "name": "source_file",
+          "type": "VARCHAR",
+          "description": ""
+        },
+        {
+          "name": "company_gstin",
+          "type": "VARCHAR",
+          "description": ""
+        },
+        {
+          "name": "period_date",
+          "type": "DATE",
+          "description": ""
+        }
+      ],
+      "row_count": 37,
+      "description": "Data from 2021",
+      "keywords": [
+        "source",
+        "period",
+        "supplier",
+        "days",
+        "name",
+        "date",
+        "file",
+        "company",
+        "month",
+        "total",
+        "2021",
+        "payment",
+        "transaction",
+        "amount",
+        "excise"
+      ],
+      "data_type": "unknown",
+      "sample_rows": [
+        {
+          "supplier_name": "UMAR DRAJ",
+          "payment_days": 0.0,
+          "transaction_amount": 305993.031,
+          "discount_amount": 0.0,
+          "other_charges": 0.0,
+          "tax_amount": 0.0,
+          "excise_amount": 0.0,
+          "total_amount": 305999.0,
+          "month": "August",
+          "year": 2021,
+          "source_file": "august 2021.xls",
+          "company_gstin": "09AAPFD1128D1ZN",
+          "period_date": "2021-08-01T00:00:00"
+        },
+        {
+          "supplier_name": "CASH",
+          "payment_days": 0.0,
+          "transaction_amount": 32285.004,
+          "discount_amount": 0.0,
+          "other_charges": 0.0,
+          "tax_amount": 0.0,
+          "excise_amount": 0.0,
+          "total_amount": 32285.0,
+          "month": "August",
+          "year": 2021,
+          "source_file": "august 2021.xls",
+          "company_gstin": "09AAPFD1128D1ZN",
+          "period_date": "2021-08-01T00:00:00"
+        },
+        {
+          "supplier_name": "ANUPAM MARKETING",
+          "payment_days": 0.0,
+          "transaction_amount": 37962.0,
+          "discount_amount": 0.0,
+          "other_charges": 0.0,
+          "tax_amount": 0.0,
+          "excise_amount": 0.0,
+          "total_amount": 37962.0,
+          "month": "August",
+          "year": 2021,
+          "source_file": "august 2021.xls",
+          "company_gstin": "09AAPFD1128D1ZN",
+          "period_date": "2021-08-01T00:00:00"
+        }
+      ],
+      "date_range": {
+        "date_column": "period_date",
+        "min_date": "2021-08-01",
+        "max_date": "2021-08-01",
+        "period_description": "August 2021"
+      },
+      "statistics": {
+        "unique_counts": {
+          "supplier_name": 37,
+          "month": 1
+        },
+        "null_percentages": {},
+        "numeric_sums": {
+          "payment_days": 0.0,
+          "transaction_amount": 2662708.472
+        }
+      },
+      "example_queries": [
+        "Total of payment_days",
+        "Sum of payment_days by supplier_name",
+        "Count by supplier_name",
+        "Trend of payment_days over time",
+        "Show all data from purchase_2021_08"
+      ],
+      "related_tables": [],
+      "created_at": "2026-02-01T13:21:54.493795",
+      "updated_at": "2026-02-01T13:21:54.493799"
+    },
+    "purchase_2021_11": {
+      "table_name": "purchase_2021_11",
+      "source_file": "purchase_2021_11.csv",
+      "columns": [
+        {
+          "name": "supplier_name",
+          "type": "VARCHAR",
+          "description": ""
+        },
+        {
+          "name": "payment_days",
+          "type": "DOUBLE",
+          "description": ""
+        },
+        {
+          "name": "transaction_amount",
+          "type": "DOUBLE",
+          "description": ""
+        },
+        {
+          "name": "discount_amount",
+          "type": "DOUBLE",
+          "description": ""
+        },
+        {
+          "name": "other_charges",
+          "type": "DOUBLE",
+          "description": ""
+        },
+        {
+          "name": "tax_amount",
+          "type": "DOUBLE",
+          "description": ""
+        },
+        {
+          "name": "excise_amount",
+          "type": "DOUBLE",
+          "description": ""
+        },
+        {
+          "name": "total_amount",
+          "type": "DOUBLE",
+          "description": ""
+        },
+        {
+          "name": "month",
+          "type": "VARCHAR",
+          "description": ""
+        },
+        {
+          "name": "year",
+          "type": "BIGINT",
+          "description": ""
+        },
+        {
+          "name": "source_file",
+          "type": "VARCHAR",
+          "description": ""
+        },
+        {
+          "name": "company_gstin",
+          "type": "VARCHAR",
+          "description": ""
+        },
+        {
+          "name": "period_date",
+          "type": "DATE",
+          "description": ""
+        }
+      ],
+      "row_count": 34,
+      "description": "Data from 2021",
+      "keywords": [
+        "source",
+        "period",
+        "supplier",
+        "days",
+        "name",
+        "date",
+        "file",
+        "company",
+        "month",
+        "total",
+        "2021",
+        "payment",
+        "transaction",
+        "amount",
+        "excise"
+      ],
+      "data_type": "unknown",
+      "sample_rows": [
+        {
+          "supplier_name": "UMAR DRAJ",
+          "payment_days": 0.0,
+          "transaction_amount": 483559.8339999999,
+          "discount_amount": 0.0,
+          "other_charges": 0.0,
+          "tax_amount": 0.0,
+          "excise_amount": 0.0,
+          "total_amount": 483558.0,
+          "month": "November",
+          "year": 2021,
+          "source_file": "november 2021.xls",
+          "company_gstin": "09AAPFD1128D1ZN",
+          "period_date": "2021-11-01T00:00:00"
+        },
+        {
+          "supplier_name": "CASH",
+          "payment_days": 0.0,
+          "transaction_amount": 148414.99800000002,
+          "discount_amount": 0.0,
+          "other_charges": 0.0,
+          "tax_amount": 0.0,
+          "excise_amount": 0.0,
+          "total_amount": 148415.0,
+          "month": "November",
+          "year": 2021,
+          "source_file": "november 2021.xls",
+          "company_gstin": "09AAPFD1128D1ZN",
+          "period_date": "2021-11-01T00:00:00"
+        },
+        {
+          "supplier_name": "ANUPAM MARKETING",
+          "payment_days": 0.0,
+          "transaction_amount": 78995.01,
+          "discount_amount": 0.0,
+          "other_charges": 0.0,
+          "tax_amount": 0.0,
+          "excise_amount": 0.0,
+          "total_amount": 78995.0,
+          "month": "November",
+          "year": 2021,
+          "source_file": "november 2021.xls",
+          "company_gstin": "09AAPFD1128D1ZN",
+          "period_date": "2021-11-01T00:00:00"
+        }
+      ],
+      "date_range": {
+        "date_column": "period_date",
+        "min_date": "2021-11-01",
+        "max_date": "2021-11-01",
+        "period_description": "November 2021"
+      },
+      "statistics": {
+        "unique_counts": {
+          "supplier_name": 34,
+          "month": 1
+        },
+        "null_percentages": {},
+        "numeric_sums": {
+          "payment_days": 0.0,
+          "transaction_amount": 3996759.6969999997
+        }
+      },
+      "example_queries": [
+        "Total of payment_days",
+        "Sum of payment_days by supplier_name",
+        "Count by supplier_name",
+        "Trend of payment_days over time",
+        "Show all data from purchase_2021_11"
+      ],
+      "related_tables": [],
+      "created_at": "2026-02-01T13:21:54.503776",
+      "updated_at": "2026-02-01T13:21:54.503779"
+    },
+    "purchase_2021_12": {
+      "table_name": "purchase_2021_12",
+      "source_file": "purchase_2021_12.csv",
+      "columns": [
+        {
+          "name": "supplier_name",
+          "type": "VARCHAR",
+          "description": ""
+        },
+        {
+          "name": "payment_days",
+          "type": "DOUBLE",
+          "description": ""
+        },
+        {
+          "name": "transaction_amount",
+          "type": "DOUBLE",
+          "description": ""
+        },
+        {
+          "name": "discount_amount",
+          "type": "DOUBLE",
+          "description": ""
+        },
+        {
+          "name": "other_charges",
+          "type": "DOUBLE",
+          "description": ""
+        },
+        {
+          "name": "tax_amount",
+          "type": "DOUBLE",
+          "description": ""
+        },
+        {
+          "name": "excise_amount",
+          "type": "DOUBLE",
+          "description": ""
+        },
+        {
+          "name": "total_amount",
+          "type": "DOUBLE",
+          "description": ""
+        },
+        {
+          "name": "month",
+          "type": "VARCHAR",
+          "description": ""
+        },
+        {
+          "name": "year",
+          "type": "BIGINT",
+          "description": ""
+        },
+        {
+          "name": "source_file",
+          "type": "VARCHAR",
+          "description": ""
+        },
+        {
+          "name": "company_gstin",
+          "type": "VARCHAR",
+          "description": ""
+        },
+        {
+          "name": "period_date",
+          "type": "DATE",
+          "description": ""
+        }
+      ],
+      "row_count": 35,
+      "description": "Data from 2021",
+      "keywords": [
+        "source",
+        "period",
+        "supplier",
+        "days",
+        "name",
+        "date",
+        "file",
+        "company",
+        "month",
+        "total",
+        "2021",
+        "payment",
+        "transaction",
+        "amount",
+        "excise"
+      ],
+      "data_type": "unknown",
+      "sample_rows": [
+        {
+          "supplier_name": "UMAR DRAJ",
+          "payment_days": 0.0,
+          "transaction_amount": 414075.8470000001,
+          "discount_amount": 0.0,
+          "other_charges": 0.0,
+          "tax_amount": 0.0,
+          "excise_amount": 0.0,
+          "total_amount": 414074.0,
+          "month": "December",
+          "year": 2021,
+          "source_file": "december 2021.xls",
+          "company_gstin": "09AAPFD1128D1ZN",
+          "period_date": "2021-12-01T00:00:00"
+        },
+        {
+          "supplier_name": "CASH",
+          "payment_days": 0.0,
+          "transaction_amount": 45890.88,
+          "discount_amount": 0.0,
+          "other_charges": 0.0,
+          "tax_amount": 0.0,
+          "excise_amount": 0.0,
+          "total_amount": 45891.0,
+          "month": "December",
+          "year": 2021,
+          "source_file": "december 2021.xls",
+          "company_gstin": "09AAPFD1128D1ZN",
+          "period_date": "2021-12-01T00:00:00"
+        },
+        {
+          "supplier_name": "ANUPAM MARKETING",
+          "payment_days": 0.0,
+          "transaction_amount": 40425.0,
+          "discount_amount": 0.0,
+          "other_charges": 0.0,
+          "tax_amount": 0.0,
+          "excise_amount": 0.0,
+          "total_amount": 40425.0,
+          "month": "December",
+          "year": 2021,
+          "source_file": "december 2021.xls",
+          "company_gstin": "09AAPFD1128D1ZN",
+          "period_date": "2021-12-01T00:00:00"
+        }
+      ],
+      "date_range": {
+        "date_column": "period_date",
+        "min_date": "2021-12-01",
+        "max_date": "2021-12-01",
+        "period_description": "December 2021"
+      },
+      "statistics": {
+        "unique_counts": {
+          "supplier_name": 35,
+          "month": 1
+        },
+        "null_percentages": {},
+        "numeric_sums": {
+          "payment_days": 0.0,
+          "transaction_amount": 3275311.3629999994
+        }
+      },
+      "example_queries": [
+        "Total of payment_days",
+        "Sum of payment_days by supplier_name",
+        "Count by supplier_name",
+        "Trend of payment_days over time",
+        "Show all data from purchase_2021_12"
+      ],
+      "related_tables": [],
+      "created_at": "2026-02-01T13:21:54.506318",
+      "updated_at": "2026-02-01T13:21:54.506319"
+    },
+    "purchase_2022_01": {
+      "table_name": "purchase_2022_01",
+      "source_file": "purchase_2022_01.csv",
+      "columns": [
+        {
+          "name": "supplier_name",
+          "type": "VARCHAR",
+          "description": ""
+        },
+        {
+          "name": "payment_days",
+          "type": "DOUBLE",
+          "description": ""
+        },
+        {
+          "name": "transaction_amount",
+          "type": "DOUBLE",
+          "description": ""
+        },
+        {
+          "name": "discount_amount",
+          "type": "DOUBLE",
+          "description": ""
+        },
+        {
+          "name": "other_charges",
+          "type": "DOUBLE",
+          "description": ""
+        },
+        {
+          "name": "tax_amount",
+          "type": "DOUBLE",
+          "description": ""
+        },
+        {
+          "name": "excise_amount",
+          "type": "DOUBLE",
+          "description": ""
+        },
+        {
+          "name": "total_amount",
+          "type": "DOUBLE",
+          "description": ""
+        },
+        {
+          "name": "month",
+          "type": "VARCHAR",
+          "description": ""
+        },
+        {
+          "name": "year",
+          "type": "BIGINT",
+          "description": ""
+        },
+        {
+          "name": "source_file",
+          "type": "VARCHAR",
+          "description": ""
+        },
+        {
+          "name": "company_gstin",
+          "type": "VARCHAR",
+          "description": ""
+        },
+        {
+          "name": "period_date",
+          "type": "DATE",
+          "description": ""
+        }
+      ],
+      "row_count": 30,
+      "description": "Data from 2022",
+      "keywords": [
+        "source",
+        "period",
+        "supplier",
+        "days",
+        "name",
+        "date",
+        "file",
+        "company",
+        "month",
+        "2022",
+        "total",
+        "payment",
+        "transaction",
+        "amount",
+        "excise"
+      ],
+      "data_type": "unknown",
+      "sample_rows": [
+        {
+          "supplier_name": "UMAR DRAJ",
+          "payment_days": 0.0,
+          "transaction_amount": 286287.68400000007,
+          "discount_amount": 0.0,
+          "other_charges": 0.0,
+          "tax_amount": 0.0,
+          "excise_amount": 0.0,
+          "total_amount": 286286.0,
+          "month": "January",
+          "year": 2022,
+          "source_file": "january 2022.xls",
+          "company_gstin": "09AAPFD1128D1ZN",
+          "period_date": "2022-01-01T00:00:00"
+        },
+        {
+          "supplier_name": "CASH",
+          "payment_days": 0.0,
+          "transaction_amount": 31180.0,
+          "discount_amount": 0.0,
+          "other_charges": 0.0,
+          "tax_amount": 0.0,
+          "excise_amount": 0.0,
+          "total_amount": 31180.0,
+          "month": "January",
+          "year": 2022,
+          "source_file": "january 2022.xls",
+          "company_gstin": "09AAPFD1128D1ZN",
+          "period_date": "2022-01-01T00:00:00"
+        },
+        {
+          "supplier_name": "ANUPAM MARKETING",
+          "payment_days": 0.0,
+          "transaction_amount": 40950.0,
+          "discount_amount": 0.0,
+          "other_charges": 0.0,
+          "tax_amount": 0.0,
+          "excise_amount": 0.0,
+          "total_amount": 40950.0,
+          "month": "January",
+          "year": 2022,
+          "source_file": "january 2022.xls",
+          "company_gstin": "09AAPFD1128D1ZN",
+          "period_date": "2022-01-01T00:00:00"
+        }
+      ],
+      "date_range": {
+        "date_column": "period_date",
+        "min_date": "2022-01-01",
+        "max_date": "2022-01-01",
+        "period_description": "January 2022"
+      },
+      "statistics": {
+        "unique_counts": {
+          "supplier_name": 30,
+          "month": 1
+        },
+        "null_percentages": {},
+        "numeric_sums": {
+          "payment_days": 0.0,
+          "transaction_amount": 2291888.389
+        }
+      },
+      "example_queries": [
+        "Total of payment_days",
+        "Sum of payment_days by supplier_name",
+        "Count by supplier_name",
+        "Trend of payment_days over time",
+        "Show all data from purchase_2022_01"
+      ],
+      "related_tables": [],
+      "created_at": "2026-02-01T13:21:54.508916",
+      "updated_at": "2026-02-01T13:21:54.508918"
+    }
+  }
+}
