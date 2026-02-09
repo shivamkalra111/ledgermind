@@ -66,7 +66,7 @@ DONE ✅                DONE ✅               DONE ✅                 NEXT
 | `core/reference_data.py` | CSV lookups | ✅ |
 | `core/customer.py` | Customer isolation | ✅ |
 | `core/data_state.py` | Smart file detection | ✅ |
-| 3 Agents | Discovery, Compliance, Strategist | ✅ |
+| 4 Agents | Discovery, Compliance, Strategist, Recommendation | ✅ |
 | Tests | 166 passing | ✅ |
 
 ---
@@ -191,6 +191,86 @@ The data loading layer is now completely data-agnostic:
 - `core/schema.py`: Deprecated SDM mappings
 - `core/mapper.py`: Deprecated header mapping
 - `llm/client.py`: Few-shot SQL generation with validation
+
+---
+
+## Phase 2B: LangGraph Integration ✅ COMPLETE
+
+**Goal:** Implement proper graph-based agent orchestration.
+
+| Feature | Description | Status |
+|---------|-------------|--------|
+| **LangGraph Workflow** | Graph-based orchestration | ✅ Implemented |
+| **State Management** | TypedDict state passing | ✅ Implemented |
+| **Conditional Routing** | Intent-based branching | ✅ Implemented |
+| **Recommendation Agent** | Dedicated agent for advice | ✅ Implemented |
+| **Streaming Support** | Real-time step updates | ✅ Implemented |
+| **Checkpointing** | Resume from failures | ✅ Optional |
+| **Security Module** | Prompt injection protection | ✅ Implemented |
+
+### Graph Structure
+
+```
+START → route_intent → [conditional routing]
+                          │
+          ┌───────────────┼───────────────┐
+          ▼               ▼               ▼
+    data_query    knowledge_query   multi_step_analysis
+          │               │               │
+          │               │         ┌─────┴─────┐
+          │               │         ▼           │
+          │               │    data_overview    │
+          │               │         ▼           │
+          │               │    compliance       │
+          │               │         ▼           │
+          │               │    strategic        │
+          │               │         ▼           │
+          │               │    recommendations  │
+          │               │         ▼           │
+          │               │    exec_summary     │
+          └───────────────┴─────────┴───────────┘
+                          │
+                          ▼
+                   format_response → END
+```
+
+### Why LangGraph?
+
+| Before | After |
+|--------|-------|
+| Function-based handlers | Graph nodes with edges |
+| Manual state passing | Built-in state management |
+| No streaming | Real-time step updates |
+| No checkpointing | Resumable workflows |
+
+### Files Added/Updated
+
+| File | Change |
+|------|--------|
+| `orchestration/graph.py` | NEW - LangGraph workflow |
+| `agents/recommendation.py` | NEW - Recommendation agent |
+| `orchestration/__init__.py` | Export AgentGraph |
+| `requirements.txt` | Added langgraph>=1.0.0 |
+
+### Security - Prompt Injection Protection
+
+Comprehensive multi-layer security:
+
+```
+User Input → API Validation → LLM Sanitization → SQL Validation → Execute
+```
+
+| Protection | Layer | What It Does |
+|------------|-------|--------------|
+| **Input Sanitization** | API + LLM | Blocks system overrides, jailbreaks, delimiter injection |
+| **SQL Validation** | LLM Client | Only SELECT allowed, blocks DROP/DELETE/INSERT |
+| **Output Sanitization** | LLM Client | Removes leaked system artifacts |
+| **Path Validation** | Workflow | Prevents path traversal attacks |
+
+**Files added:**
+- `core/security.py` - InputSanitizer, SQLValidator, PathValidator
+- `api/routes/query.py` - API-level input validation
+- `llm/client.py` - Integrated security checks
 
 ---
 

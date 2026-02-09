@@ -80,10 +80,15 @@
 
 ### 2. LLM Brain
 
-**AgentWorkflow** (`orchestration/workflow.py`)
-- The main orchestrator
-- Routes all queries
-- Calls appropriate handlers
+**AgentGraph** (`orchestration/graph.py`) - *NEW: LangGraph-based*
+- Graph-based workflow orchestration
+- State management between nodes
+- Conditional routing based on intent
+- Streaming support for real-time updates
+
+**AgentWorkflow** (`orchestration/workflow.py`) - *Legacy*
+- Original function-based orchestrator
+- Still supported for backward compatibility
 
 **IntentRouter** (`orchestration/router.py`)
 - Classifies user intent
@@ -115,6 +120,28 @@
 - Tax rates
 - HSN/SAC codes
 - State codes
+
+### 4. AI Agents
+
+**DiscoveryAgent** (`agents/discovery.py`)
+- Data-agnostic file loading
+- Excel/CSV ingestion into DuckDB
+
+**ComplianceAgent** (`agents/compliance.py`)
+- Tax rate validation
+- GST compliance checks
+- Section 43B(h) monitoring
+
+**StrategistAgent** (`agents/strategist.py`)
+- Vendor reliability scoring
+- Cash flow forecasting
+- Profit margin analysis
+
+**RecommendationAgent** (`agents/recommendation.py`)
+- Synthesizes findings from other agents
+- Generates prioritized recommendations
+- Uses templates + LLM for nuanced insights
+- Categories: Compliance, Data Quality, Cash Flow, Vendor, Tax Savings, Risk
 
 ---
 
@@ -241,10 +268,62 @@ workspace/
 | Layer | Technology | Why |
 |-------|------------|-----|
 | **LLM** | Ollama + Qwen2.5 | Local, free, good quality |
+| **Orchestration** | LangGraph | Graph-based agent coordination |
 | **Data** | DuckDB | Fast SQL on files |
 | **Knowledge** | ChromaDB | Vector search for RAG |
 | **API** | FastAPI | Modern, fast, docs auto-gen |
 | **Admin UI** | Streamlit | Quick internal tool |
+
+---
+
+## LangGraph Integration
+
+### Why LangGraph?
+
+| Benefit | Description |
+|---------|-------------|
+| **State Management** | Built-in state passing between nodes |
+| **Conditional Routing** | Dynamic flow based on intent |
+| **Visual Workflows** | Clear graph of agent interactions |
+| **Streaming** | Real-time updates as analysis progresses |
+| **Checkpointing** | Resume from failures (optional) |
+
+### Graph Structure
+
+```
+    START
+      │
+      ▼
+    route_intent ──────────────────────────────┐
+      │                                         │
+      ├─► data_query ────────────────────────── ├──► format_response ──► END
+      ├─► knowledge_query ─────────────────────┤
+      ├─► compliance_check ────────────────────┤
+      │                                         │
+      └─► multi_step_analysis                   │
+            │                                   │
+            ├──► data_overview                  │
+            ├──► compliance_analysis            │
+            ├──► strategic_insights             │
+            ├──► generate_recommendations       │
+            └──► executive_summary ─────────────┘
+```
+
+### Usage
+
+```python
+from orchestration import AgentGraph
+
+# Create graph with dependencies
+graph = AgentGraph(data_engine, knowledge_base, llm_client)
+
+# Synchronous execution
+response = graph.run("full analysis")
+
+# Streaming execution
+for event in graph.stream("full analysis"):
+    print(f"Step: {event['step']}")
+```
 
 ---
 
@@ -294,6 +373,39 @@ SQL generation uses few-shot learning:
 - Examples teach UNION ALL, GROUP BY, filtering patterns
 - Automatic fallback if SQL model produces invalid output
 - ~90% accuracy on complex queries
+
+### 9. Security-First Design
+
+Multi-layer defense-in-depth against prompt injection:
+
+```
+User Input → API Sanitization → Secure Prompt Framing → LLM → SQL Validation → Execute
+```
+
+**Layer 1: Input Sanitization** (`core/security.py`)
+- Pattern matching for known injection attacks
+- Blocks system override, jailbreak, delimiter injection
+
+**Layer 2: Defensive Prompt Engineering** (`llm/secure_prompts.py`)
+- XML delimiters for user input boundaries
+- "DATA not instructions" explicit framing
+- Sandwich defense (rules repeated at end)
+
+**Layer 3: Secure System Prompts**
+- IMMUTABLE security rules section
+- Clear instruction hierarchy
+- Explicit refusal instructions
+
+**Layer 4: Output Validation**
+- SQL validation (only SELECT allowed)
+- Artifact removal from responses
+- Response format validation
+
+Key protections:
+- System override detection ("ignore instructions")
+- Delimiter injection blocking ([INST], <|system|>, etc.)
+- SQL injection prevention (DROP, DELETE, stacked queries)
+- Path traversal protection for file operations
 
 ---
 

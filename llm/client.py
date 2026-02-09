@@ -5,10 +5,15 @@ Handles all LLM interactions locally
 Supports dual-model setup:
 - Primary model (qwen2.5) for intent routing, knowledge, formatting
 - SQL model (sqlcoder) for text-to-SQL generation
+
+Security:
+- Input sanitization for prompt injection protection
+- SQL validation for generated queries
 """
 
 import json
-from typing import Optional
+import logging
+from typing import Optional, Tuple
 import ollama
 from config import (
     OLLAMA_BASE_URL, 
@@ -20,21 +25,25 @@ from config import (
     SQL_MAX_TOKENS,
     SYSTEM_PROMPT
 )
+from core.security import (
+    sanitize_user_input,
+    validate_sql_query,
+    SecurityResult,
+    ThreatLevel,
+    OutputSanitizer
+)
+from llm.secure_prompts import (
+    SECURE_SYSTEM_PROMPT,
+    SECURE_SQL_SYSTEM_PROMPT,
+    SecurePromptBuilder,
+    get_prompt_builder
+)
+
+logger = logging.getLogger(__name__)
 
 
-# SQL-specific system prompt
-SQL_SYSTEM_PROMPT = """You are a SQL expert. Generate DuckDB-compatible SQL queries.
-
-RULES:
-1. Return ONLY the SQL query - no explanations, no markdown, no backticks
-2. Use exact column names from the provided schema
-3. Column names with spaces must be quoted: "Column Name"
-4. For aggregations, always use aliases: SUM(x) AS total
-5. Limit results to 20 unless asked for more
-6. Use LIKE for text matching, not =
-7. When multiple similar tables exist (e.g., data_jan, data_feb), use UNION ALL to combine them
-8. Always include the table name or a source identifier when combining tables
-"""
+# Use secure SQL system prompt (with injection resistance)
+SQL_SYSTEM_PROMPT = SECURE_SQL_SYSTEM_PROMPT
 
 # Few-shot examples for SQL generation (generic, not data-specific)
 SQL_FEW_SHOT_EXAMPLES = [
@@ -112,12 +121,23 @@ class LLMClient:
     Supports dual-model setup:
     - Primary model for general tasks
     - SQL model for text-to-SQL (optional, falls back to primary)
+    
+    Security features:
+    - Input sanitization for prompt injection protection
+    - SQL validation before returning generated queries
+    - Output sanitization to remove system artifacts
     """
     
-    def __init__(self, model: str = LLM_MODEL, sql_model: Optional[str] = SQL_MODEL):
+    def __init__(
+        self, 
+        model: str = LLM_MODEL, 
+        sql_model: Optional[str] = SQL_MODEL,
+        enable_security: bool = True
+    ):
         self.model = model
         self.sql_model = sql_model
         self.client = ollama.Client(host=OLLAMA_BASE_URL)
+        self.enable_security = enable_security
         
         # Check if SQL model is available, fallback to primary if not
         if self.sql_model and not self._is_model_available(self.sql_model):
@@ -180,9 +200,58 @@ class LLMClient:
         system_prompt: str = SYSTEM_PROMPT,
         temperature: float = LLM_TEMPERATURE,
         max_tokens: int = LLM_MAX_TOKENS,
-        json_mode: bool = False
+        json_mode: bool = False,
+        skip_security: bool = False,
+        use_secure_framing: bool = True,
+        context: str = None
     ) -> str:
-        """Generate a response from the primary LLM."""
+        """
+        Generate a response from the primary LLM.
+        
+        Args:
+            prompt: User prompt (will be sanitized)
+            system_prompt: System prompt for context
+            temperature: Response randomness
+            max_tokens: Maximum response length
+            json_mode: Whether to request JSON output
+            skip_security: Skip input sanitization (use only for internal prompts)
+            use_secure_framing: Wrap prompt with defensive framing (recommended)
+            context: Optional context to include with secure framing
+            
+        Returns:
+            LLM response text
+            
+        Raises:
+            ValueError: If prompt is blocked due to security threat
+        """
+        # Security: Sanitize user input
+        if self.enable_security and not skip_security:
+            security_result = sanitize_user_input(prompt)
+            
+            if security_result.blocked:
+                logger.warning(
+                    f"Blocked prompt injection attempt. "
+                    f"Threat: {security_result.threat_level.value}, "
+                    f"Issues: {security_result.threats_detected}"
+                )
+                raise ValueError(
+                    "Your request could not be processed due to security restrictions. "
+                    "Please rephrase your question."
+                )
+            
+            # Use sanitized input
+            if security_result.threats_detected:
+                logger.info(f"Sanitized input. Threats detected: {security_result.threats_detected}")
+                prompt = security_result.sanitized_input
+        
+        # Security: Use secure system prompt by default
+        if self.enable_security and system_prompt == SYSTEM_PROMPT:
+            system_prompt = SECURE_SYSTEM_PROMPT
+        
+        # Security: Apply secure framing to user prompt
+        if self.enable_security and use_secure_framing and not skip_security:
+            prompt_builder = get_prompt_builder()
+            prompt = prompt_builder.build_query_prompt(prompt, context=context)
         
         messages = [
             {"role": "system", "content": system_prompt},
@@ -203,7 +272,13 @@ class LLMClient:
             options=options
         )
         
-        return response["message"]["content"]
+        output = response["message"]["content"]
+        
+        # Security: Clean output of any system artifacts
+        if self.enable_security:
+            output = OutputSanitizer.remove_system_artifacts(output)
+        
+        return output
     
     def generate_sql(
         self,
@@ -212,23 +287,55 @@ class LLMClient:
         temperature: float = SQL_TEMPERATURE,
         max_tokens: int = SQL_MAX_TOKENS,
         use_few_shot: bool = True
-    ) -> str:
+    ) -> Tuple[str, bool]:
         """
         Generate SQL using few-shot learning for better accuracy.
         
+        Security:
+        - Input is sanitized for prompt injection
+        - Generated SQL is validated before return
+        - Only SELECT queries are allowed
+        
         Args:
-            prompt: Natural language question
+            prompt: Natural language question (will be sanitized)
             schema: Database schema (tables, columns, sample data)
             temperature: Low for deterministic SQL
             max_tokens: SQL queries are typically short
             use_few_shot: Whether to include few-shot examples (default True)
             
         Returns:
-            Raw SQL query string
+            Tuple of (SQL query string, is_valid)
+            If security validation fails, returns ("", False)
         """
+        # Security: Sanitize the user's question
+        if self.enable_security:
+            security_result = sanitize_user_input(prompt)
+            
+            if security_result.blocked:
+                logger.warning(
+                    f"Blocked SQL generation - prompt injection detected. "
+                    f"Threat: {security_result.threat_level.value}"
+                )
+                return "", False
+            
+            if security_result.threats_detected:
+                logger.info(f"SQL prompt sanitized. Threats: {security_result.threats_detected}")
+                prompt = security_result.sanitized_input
         
         # Build prompt with or without few-shot examples
-        if use_few_shot:
+        # Security: Use secure prompt builder for proper framing
+        if self.enable_security:
+            prompt_builder = get_prompt_builder()
+            few_shot_examples = None
+            if use_few_shot:
+                # Format few-shot examples
+                examples_text = ""
+                for i, ex in enumerate(SQL_FEW_SHOT_EXAMPLES, 1):
+                    examples_text += f"--- Example {i} ---\nSCHEMA:\n{ex['schema']}\n\nQUESTION: {ex['question']}\n\nSQL:\n{ex['sql']}\n\n"
+                few_shot_examples = examples_text
+            
+            full_prompt = prompt_builder.build_sql_prompt(prompt, schema, few_shot_examples)
+        elif use_few_shot:
             full_prompt = _build_few_shot_prompt(schema, prompt)
         else:
             full_prompt = f"""DATABASE SCHEMA:
@@ -248,6 +355,8 @@ Generate a DuckDB SQL query to answer this question. Return ONLY the SQL."""
             "num_predict": max_tokens,
         }
         
+        sql = ""
+        
         # Try SQL model first if available
         if self.sql_model:
             try:
@@ -258,24 +367,38 @@ Generate a DuckDB SQL query to answer this question. Return ONLY the SQL."""
                 )
                 sql = self._clean_sql(response["message"]["content"])
                 
-                # Validate the result - must be valid SQL
-                if sql and sql.upper().startswith("SELECT") and "FROM" in sql.upper():
-                    return sql
-                # Invalid SQL from SQL model - fall through to primary
+                # Basic check - must look like valid SQL
+                if not (sql and sql.upper().startswith("SELECT") and "FROM" in sql.upper()):
+                    sql = ""  # Invalid, try primary model
             except Exception:
-                pass
+                sql = ""
         
         # Fallback to primary model with few-shot
-        messages[0]["content"] = SQL_SYSTEM_PROMPT
+        if not sql:
+            messages[0]["content"] = SQL_SYSTEM_PROMPT
+            
+            response = self.client.chat(
+                model=self.model,
+                messages=messages,
+                options=options
+            )
+            
+            sql = self._clean_sql(response["message"]["content"])
         
-        response = self.client.chat(
-            model=self.model,
-            messages=messages,
-            options=options
-        )
+        # Security: Validate the generated SQL
+        if self.enable_security and sql:
+            is_valid, clean_sql, issues = validate_sql_query(sql)
+            
+            if not is_valid:
+                logger.warning(
+                    f"Generated SQL failed validation. Issues: {issues}. "
+                    f"SQL (truncated): {sql[:200]}"
+                )
+                return "", False
+            
+            sql = clean_sql
         
-        sql = response["message"]["content"]
-        return self._clean_sql(sql)
+        return sql, bool(sql)
     
     def _clean_sql(self, sql: str) -> str:
         """Clean SQL response from LLM."""
@@ -325,7 +448,8 @@ Generate a DuckDB SQL query to answer this question. Return ONLY the SQL."""
             "primary_available": self._is_model_available(self.model),
             "sql_model": self.sql_model,
             "sql_available": self._is_model_available(self.sql_model) if self.sql_model else False,
-            "using_for_sql": self.sql_model if self.sql_model else self.model
+            "using_for_sql": self.sql_model if self.sql_model else self.model,
+            "security_enabled": self.enable_security
         }
 
 

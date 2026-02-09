@@ -4,7 +4,9 @@
 
 ---
 
-## The Big Picture
+## The Big Picture (LangGraph)
+
+LedgerMind now uses **LangGraph** for agent orchestration. The workflow is defined as a directed graph where nodes are processing steps and edges define the flow.
 
 ```
 User Question
@@ -17,27 +19,38 @@ User Question
         │
         ▼
 ┌────────────────┐
-│  AgentWorkflow │  (orchestration/workflow.py)
-│  The brain     │
+│   AgentGraph   │  (orchestration/graph.py) - LangGraph-based
+│   The brain    │
 └───────┬────────┘
         │
         ▼
 ┌────────────────┐
-│  IntentRouter  │  (orchestration/router.py)
-│  Classifies    │
+│  route_intent  │  First node in graph
+│  (IntentRouter)│
 └───────┬────────┘
         │
-        ├──── DATA_QUERY ────▶ DuckDB (core/data_engine.py)
+        ├──── DATA_QUERY ────▶ handle_data_query node
         │
-        ├──── KNOWLEDGE_QUERY ▶ ChromaDB + LLM (core/knowledge.py)
+        ├──── KNOWLEDGE_QUERY ▶ handle_knowledge_query node
         │
-        ├──── COMPLIANCE_CHECK ▶ Agents (agents/compliance.py)
+        ├──── COMPLIANCE_CHECK ▶ handle_compliance_check node
         │
-        └──── FOLDER_ANALYSIS ─▶ Agents (agents/discovery.py)
+        ├──── MULTI_STEP_ANALYSIS ▶ 5-node chain (see below)
+        │
+        └──── FOLDER_ANALYSIS ─▶ handle_data_query node
                 │
                 ▼
-            Response
+        ┌────────────────┐
+        │ format_response │  Final formatting node
+        └───────┬────────┘
+                │
+                ▼
+              END
 ```
+
+### Legacy Flow (Still Supported)
+
+The original `AgentWorkflow` in `orchestration/workflow.py` is still available for backward compatibility.
 
 ---
 
@@ -98,6 +111,7 @@ class IntentType(Enum):
     DATA_QUERY = "data_query"           # "show my sales"
     KNOWLEDGE_QUERY = "knowledge_query" # "what is CGST"
     COMPLIANCE_CHECK = "compliance"     # "check compliance"
+    MULTI_STEP_ANALYSIS = "multi_step"  # "full analysis" or "generate report"
     FOLDER_ANALYSIS = "folder"          # "analyze my data"
     HELP = "help"
     UNKNOWN = "unknown"
@@ -176,7 +190,85 @@ The LLM uses examples to learn patterns:
 
 ---
 
-## 5. Knowledge Queries
+## 5. Multi-Step Analysis
+
+### Flow
+
+```
+"Generate full report" / "comprehensive analysis"
+        │
+        ▼
+┌─────────────────────────────────────────────────────────────┐
+│                 MULTI-STEP ANALYSIS                         │
+│                                                             │
+│  Step 1: Data Overview ─────────────────────────────────┐  │
+│          Analyze tables, record counts, date ranges     │  │
+│                        │                                 │  │
+│                        ▼                                 │  │
+│  Step 2: Compliance Check ──────────────────────────────│  │
+│          Run full audit, identify issues                │  │
+│                        │                                 │  │
+│                        ▼                                 │  │
+│  Step 3: Strategic Analysis ────────────────────────────│  │
+│          Vendor rankings, cash flow forecasts           │  │
+│                        │                                 │  │
+│                        ▼                                 │  │
+│  Step 4: Generate Recommendations ──────────────────────│  │
+│          RecommendationAgent synthesizes findings       │  │
+│                        │                                 │  │
+│                        ▼                                 │  │
+│  Step 5: Executive Summary ─────────────────────────────┘  │
+│          LLM creates comprehensive report                   │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+        │
+        ▼
+    Full Report with all findings
+```
+
+### Key Features
+
+- **Sequential orchestration**: Each step passes context to the next
+- **State management**: `MultiStepAnalysisState` tracks progress and results
+- **Error handling**: If a step fails, workflow marks it and continues
+- **RecommendationAgent**: Dedicated agent for synthesizing findings into prioritized actions
+- **LLM-powered synthesis**: Executive summary uses full context from all steps
+
+### Recommendation Agent Features
+
+The RecommendationAgent (`agents/recommendation.py`) provides:
+
+1. **Template-based recommendations** for common scenarios:
+   - Data quality issues (null values, missing data)
+   - Critical compliance violations
+   - Negative cash flow projections
+   - Vendor risk concentration
+   - MSME verification needs
+
+2. **LLM-generated recommendations** for nuanced insights
+
+3. **Prioritization**:
+   - CRITICAL: Must do immediately
+   - HIGH: Should do soon
+   - MEDIUM: Plan to do
+   - LOW: Nice to have
+
+4. **Categories**: Compliance, Data Quality, Cash Flow, Vendor, Tax Savings, Operational, Risk
+
+### Trigger Phrases
+
+```
+"full analysis"
+"comprehensive review" 
+"generate report"
+"analyze everything"
+"business health report"
+"deep dive"
+```
+
+---
+
+## 6. Knowledge Queries
 
 ### Flow
 

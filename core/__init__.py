@@ -7,6 +7,7 @@ Data-Agnostic Components:
 - data_state: Smart file change detection
 - table_catalog: Persistent metadata for loaded tables
 - metrics: Performance and usage tracking
+- security: Prompt injection protection and input validation
 
 Domain-Specific Features (GST/Accounting):
 - knowledge: ChromaDB for GST rule lookups
@@ -52,6 +53,20 @@ from .reference_data import (
     get_msme_classification,
 )
 from .query_classifier import QueryClassifier, QueryType
+from .security import (
+    InputSanitizer,
+    SQLValidator,
+    PathValidator,
+    OutputSanitizer,
+    SecurityResult,
+    ThreatLevel,
+    sanitize_user_input,
+    validate_sql_query,
+    is_safe_path,
+    get_input_sanitizer,
+    get_sql_validator,
+    get_path_validator,
+)
 
 __all__ = [
     # Customer Isolation
@@ -96,5 +111,18 @@ __all__ = [
     # Query Classifier
     "QueryClassifier",
     "QueryType",
+    # Security
+    "InputSanitizer",
+    "SQLValidator",
+    "PathValidator",
+    "OutputSanitizer",
+    "SecurityResult",
+    "ThreatLevel",
+    "sanitize_user_input",
+    "validate_sql_query",
+    "is_safe_path",
+    "get_input_sanitizer",
+    "get_sql_validator",
+    "get_path_validator",
 ]
 

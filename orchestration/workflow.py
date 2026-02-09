@@ -7,14 +7,16 @@ Each workflow instance is bound to a specific customer.
 All data operations are scoped to that customer's DuckDB.
 """
 
-from typing import Dict, Any, Optional, TypedDict, Annotated, TYPE_CHECKING
-from dataclasses import dataclass
+from typing import Dict, Any, Optional, TypedDict, Annotated, TYPE_CHECKING, List, Callable
+from dataclasses import dataclass, field
 from pathlib import Path
 from enum import Enum
+from datetime import datetime
 
 from agents.discovery import DiscoveryAgent
 from agents.compliance import ComplianceAgent
 from agents.strategist import StrategistAgent
+from agents.recommendation import RecommendationAgent, AnalysisContext
 from orchestration.router import IntentRouter, IntentType, ParsedIntent
 from core.data_engine import DataEngine
 from core.knowledge import KnowledgeBase
@@ -36,6 +38,31 @@ class WorkflowState(TypedDict):
     knowledge_result: Optional[str]
     final_response: str
     error: Optional[str]
+
+
+@dataclass
+class AnalysisStep:
+    """Represents a step in multi-step analysis."""
+    name: str
+    description: str
+    status: str = "pending"  # pending, running, completed, failed
+    result: Optional[Dict[str, Any]] = None
+    error: Optional[str] = None
+    started_at: Optional[datetime] = None
+    completed_at: Optional[datetime] = None
+
+
+@dataclass
+class MultiStepAnalysisState:
+    """State for multi-step analysis workflow."""
+    steps: List[AnalysisStep] = field(default_factory=list)
+    current_step: int = 0
+    data_summary: Optional[Dict[str, Any]] = None
+    compliance_issues: Optional[List[Dict]] = None
+    strategic_insights: Optional[Dict[str, Any]] = None
+    recommendations: List[str] = field(default_factory=list)
+    recommendation_report: Optional[Any] = None  # RecommendationReport from agent
+    final_report: Optional[str] = None
 
 
 class AgentWorkflow:
@@ -83,6 +110,7 @@ class AgentWorkflow:
         self.discovery_agent = DiscoveryAgent(self.data_engine, self.llm)
         self.compliance_agent = ComplianceAgent(self.data_engine, self.knowledge_base, self.llm)
         self.strategist_agent = StrategistAgent(self.data_engine, self.llm)
+        self.recommendation_agent = RecommendationAgent(self.data_engine, self.llm)
         
         # Initialize router
         self.router = IntentRouter(self.llm)
@@ -198,6 +226,9 @@ class AgentWorkflow:
             
             elif intent.intent_type == IntentType.STRATEGIC_ANALYSIS:
                 return self._handle_strategic_analysis()
+            
+            elif intent.intent_type == IntentType.MULTI_STEP_ANALYSIS:
+                return self._handle_multi_step_analysis(user_input)
             
             elif intent.intent_type == IntentType.DATA_QUERY:
                 return self._handle_data_query(intent.extracted_query)
@@ -398,6 +429,395 @@ class AgentWorkflow:
         
         return response
     
+    def _handle_multi_step_analysis(self, user_input: str) -> str:
+        """
+        Handle multi-step analysis: analyze data → identify issues → suggest improvements → create report.
+        
+        This orchestrates multiple agents in sequence, passing context between steps.
+        """
+        
+        if not self._data_loaded:
+            return "⚠️ No data loaded. Please analyze a folder first.\n\nExample: `analyze data`"
+        
+        # Initialize state
+        state = MultiStepAnalysisState()
+        
+        # Define the analysis steps
+        state.steps = [
+            AnalysisStep("data_overview", "Analyzing your data structure and content"),
+            AnalysisStep("compliance_check", "Checking for compliance issues"),
+            AnalysisStep("strategic_analysis", "Performing strategic analysis"),
+            AnalysisStep("generate_recommendations", "Generating personalized recommendations"),
+            AnalysisStep("create_report", "Creating comprehensive report"),
+        ]
+        
+        response_parts = ["## 🔄 Multi-Step Analysis\n"]
+        response_parts.append("Running comprehensive analysis of your data...\n")
+        
+        try:
+            # Step 1: Data Overview
+            state.steps[0].status = "running"
+            state.steps[0].started_at = datetime.now()
+            response_parts.append("\n### Step 1: Data Overview 📊\n")
+            
+            data_summary = self._analyze_data_overview()
+            state.data_summary = data_summary
+            state.steps[0].result = data_summary
+            state.steps[0].status = "completed"
+            state.steps[0].completed_at = datetime.now()
+            
+            response_parts.append(self._format_data_overview(data_summary))
+            
+            # Step 2: Compliance Check
+            state.steps[1].status = "running"
+            state.steps[1].started_at = datetime.now()
+            response_parts.append("\n### Step 2: Compliance Check ✅\n")
+            
+            compliance_result = self._run_compliance_analysis()
+            state.compliance_issues = compliance_result.get("issues", [])
+            state.steps[1].result = compliance_result
+            state.steps[1].status = "completed"
+            state.steps[1].completed_at = datetime.now()
+            
+            response_parts.append(self._format_compliance_summary(compliance_result))
+            
+            # Step 3: Strategic Analysis
+            state.steps[2].status = "running"
+            state.steps[2].started_at = datetime.now()
+            response_parts.append("\n### Step 3: Strategic Analysis 📈\n")
+            
+            strategic_result = self._run_strategic_insights()
+            state.strategic_insights = strategic_result
+            state.steps[2].result = strategic_result
+            state.steps[2].status = "completed"
+            state.steps[2].completed_at = datetime.now()
+            
+            response_parts.append(self._format_strategic_summary(strategic_result))
+            
+            # Step 4: Generate Recommendations
+            state.steps[3].status = "running"
+            state.steps[3].started_at = datetime.now()
+            response_parts.append("\n### Step 4: Recommendations 💡\n")
+            
+            recommendations = self._generate_recommendations(state)
+            state.recommendations = recommendations
+            state.steps[3].result = {"recommendations": recommendations}
+            state.steps[3].status = "completed"
+            state.steps[3].completed_at = datetime.now()
+            
+            response_parts.append(self._format_recommendations(recommendations))
+            
+            # Step 5: Create Final Report
+            state.steps[4].status = "running"
+            state.steps[4].started_at = datetime.now()
+            response_parts.append("\n### Step 5: Executive Summary 📋\n")
+            
+            executive_summary = self._create_executive_summary(state)
+            state.final_report = executive_summary
+            state.steps[4].result = {"report": executive_summary}
+            state.steps[4].status = "completed"
+            state.steps[4].completed_at = datetime.now()
+            
+            response_parts.append(executive_summary)
+            
+            # Final status
+            response_parts.append("\n---\n")
+            response_parts.append("✅ **Analysis Complete!** All 5 steps finished successfully.\n")
+            
+        except Exception as e:
+            # Mark current step as failed
+            for step in state.steps:
+                if step.status == "running":
+                    step.status = "failed"
+                    step.error = str(e)
+                    step.completed_at = datetime.now()
+            
+            response_parts.append(f"\n❌ **Error during analysis:** {str(e)}\n")
+        
+        return "\n".join(response_parts)
+    
+    def _analyze_data_overview(self) -> Dict[str, Any]:
+        """Step 1: Analyze data structure and content."""
+        tables = self.data_engine.list_tables()
+        
+        overview = {
+            "total_tables": len(tables),
+            "tables": {},
+            "total_records": 0,
+            "date_range": None,
+            "data_quality": {}
+        }
+        
+        for table in tables:
+            try:
+                # Get basic stats
+                count = int(self.data_engine.query(f"SELECT COUNT(*) as cnt FROM {table}").iloc[0]['cnt'])
+                columns_df = self.data_engine.query(f"DESCRIBE {table}")
+                columns = columns_df['column_name'].tolist()
+                
+                # Try to detect date range
+                date_cols = [c for c in columns if any(d in c.lower() for d in ['date', 'time', 'created', 'invoice'])]
+                date_range = None
+                if date_cols:
+                    try:
+                        date_col = date_cols[0]
+                        range_df = self.data_engine.query(f"SELECT MIN({date_col}) as min_d, MAX({date_col}) as max_d FROM {table}")
+                        date_range = {
+                            "min": str(range_df.iloc[0]['min_d']),
+                            "max": str(range_df.iloc[0]['max_d'])
+                        }
+                    except:
+                        pass
+                
+                # Check for nulls
+                null_counts = {}
+                for col in columns[:5]:  # Check first 5 columns
+                    try:
+                        null_count = int(self.data_engine.query(f"SELECT COUNT(*) as cnt FROM {table} WHERE {col} IS NULL").iloc[0]['cnt'])
+                        if null_count > 0:
+                            null_counts[col] = null_count
+                    except:
+                        pass
+                
+                overview["tables"][table] = {
+                    "row_count": count,
+                    "columns": columns,
+                    "column_count": len(columns),
+                    "date_range": date_range,
+                    "null_columns": null_counts
+                }
+                overview["total_records"] += count
+                
+            except Exception:
+                overview["tables"][table] = {"error": "Could not analyze"}
+        
+        return overview
+    
+    def _run_compliance_analysis(self) -> Dict[str, Any]:
+        """Step 2: Run compliance checks."""
+        try:
+            report = self.compliance_agent.run_full_audit()
+            return {
+                "summary": report.summary,
+                "issues": [
+                    {
+                        "type": issue.issue_type,
+                        "severity": issue.severity,
+                        "description": issue.description,
+                        "amount_impact": issue.amount_impact,
+                        "reference": issue.reference
+                    }
+                    for issue in (report.issues or [])
+                ],
+                "critical_count": sum(1 for i in (report.issues or []) if i.severity == "critical"),
+                "warning_count": sum(1 for i in (report.issues or []) if i.severity == "warning"),
+            }
+        except Exception as e:
+            return {"summary": f"Compliance check encountered an error: {e}", "issues": []}
+    
+    def _run_strategic_insights(self) -> Dict[str, Any]:
+        """Step 3: Run strategic analysis."""
+        try:
+            report = self.strategist_agent.run_full_analysis()
+            return {
+                "vendor_rankings": [
+                    {
+                        "name": v.vendor_name,
+                        "score": v.reliability_score,
+                        "transactions": v.total_transactions,
+                        "value": v.total_value
+                    }
+                    for v in (report.vendor_rankings or [])[:5]
+                ],
+                "cash_flow_forecasts": [
+                    {
+                        "period": f.period,
+                        "net_cash_flow": f.net_cash_flow,
+                        "confidence": f.confidence
+                    }
+                    for f in (report.cash_flow_forecasts or [])
+                ],
+                "recommendations": report.recommendations or []
+            }
+        except Exception as e:
+            return {"error": str(e), "vendor_rankings": [], "cash_flow_forecasts": [], "recommendations": []}
+    
+    def _generate_recommendations(self, state: MultiStepAnalysisState) -> List[str]:
+        """Step 4: Generate personalized recommendations using RecommendationAgent."""
+        
+        # Build context for the Recommendation Agent
+        analysis_context = AnalysisContext(
+            data_summary=state.data_summary,
+            compliance_issues=state.compliance_issues,
+            strategic_insights=state.strategic_insights
+        )
+        
+        try:
+            # Use the Recommendation Agent
+            report = self.recommendation_agent.generate_recommendations(
+                context=analysis_context,
+                max_recommendations=7
+            )
+            
+            # Store the full report for later use
+            state.recommendation_report = report
+            
+            # Return formatted recommendations as strings
+            recommendations = []
+            for rec in report.recommendations:
+                # Include priority indicator
+                priority_icons = {
+                    "critical": "🔴",
+                    "high": "🟠",
+                    "medium": "🟡",
+                    "low": "🟢"
+                }
+                icon = priority_icons.get(rec.priority.value, "")
+                recommendations.append(f"{icon} [{rec.category.value.upper()}] {rec.title}")
+                
+                # Add action items
+                for action in rec.action_items[:2]:  # Show first 2 actions
+                    recommendations.append(f"   → {action}")
+            
+            return recommendations if recommendations else ["Review compliance issues and address critical items first"]
+            
+        except Exception as e:
+            # Fallback to simple recommendations if agent fails
+            return [
+                "Review compliance issues and address critical items first",
+                "Ensure all data is up to date for accurate analysis",
+                f"Note: Full recommendation analysis unavailable ({str(e)[:50]})"
+            ]
+    
+    def _create_executive_summary(self, state: MultiStepAnalysisState) -> str:
+        """Step 5: Create executive summary using LLM."""
+        
+        # Get recommendation summary if available
+        rec_summary = ""
+        if state.recommendation_report:
+            rec_summary = state.recommendation_report.summary
+            critical_recs = state.recommendation_report.critical_count
+            high_recs = state.recommendation_report.high_count
+        else:
+            critical_recs = 0
+            high_recs = 0
+        
+        # Build comprehensive context
+        context = f"""Create an executive summary for this business analysis:
+
+DATA ANALYZED:
+- {state.data_summary.get('total_tables', 0)} data tables
+- {state.data_summary.get('total_records', 0)} total records
+
+COMPLIANCE STATUS:
+- {len([i for i in (state.compliance_issues or []) if i.get('severity') == 'critical'])} critical issues
+- {len([i for i in (state.compliance_issues or []) if i.get('severity') == 'warning'])} warnings
+{chr(10).join(['- ' + i.get('description', '')[:100] for i in (state.compliance_issues or [])[:3]])}
+
+RECOMMENDATION SUMMARY:
+- {critical_recs} critical priority items
+- {high_recs} high priority items
+{rec_summary}
+
+TOP ACTION ITEMS:
+{chr(10).join(['- ' + r for r in state.recommendations[:5] if not r.startswith('   ')])}
+"""
+        
+        prompt = f"""{context}
+
+Write a brief (3-4 paragraph) executive summary that:
+1. Summarizes the overall health of the business based on data
+2. Highlights the most important findings (good and bad)
+3. Emphasizes top priority actions
+4. Ends with an encouraging but realistic outlook
+
+Keep it professional and concise."""
+
+        try:
+            summary = self.llm.generate(prompt, max_tokens=400)
+            return summary.strip()
+        except Exception:
+            return "Executive summary could not be generated. Please review the detailed analysis above."
+    
+    def _format_data_overview(self, data: Dict[str, Any]) -> str:
+        """Format data overview for display."""
+        lines = [
+            f"**Tables Found:** {data['total_tables']}",
+            f"**Total Records:** {data['total_records']:,}",
+            ""
+        ]
+        
+        for table, info in data.get('tables', {}).items():
+            if isinstance(info, dict) and 'error' not in info:
+                lines.append(f"- **{table}**: {info.get('row_count', 0):,} rows, {info.get('column_count', 0)} columns")
+                if info.get('date_range'):
+                    lines.append(f"  - Date range: {info['date_range'].get('min', 'N/A')} to {info['date_range'].get('max', 'N/A')}")
+        
+        return "\n".join(lines)
+    
+    def _format_compliance_summary(self, data: Dict[str, Any]) -> str:
+        """Format compliance results for display."""
+        critical = data.get('critical_count', 0)
+        warnings = data.get('warning_count', 0)
+        
+        lines = [
+            f"**Critical Issues:** {critical} 🔴" if critical > 0 else "**Critical Issues:** 0 ✅",
+            f"**Warnings:** {warnings} 🟡" if warnings > 0 else "**Warnings:** 0 ✅",
+            ""
+        ]
+        
+        issues = data.get('issues', [])[:5]
+        if issues:
+            lines.append("**Top Issues:**")
+            for issue in issues:
+                emoji = "🔴" if issue.get('severity') == 'critical' else "🟡"
+                lines.append(f"  {emoji} {issue.get('type', 'Unknown')}: {issue.get('description', 'No description')[:80]}")
+        else:
+            lines.append("✅ No significant compliance issues detected!")
+        
+        return "\n".join(lines)
+    
+    def _format_strategic_summary(self, data: Dict[str, Any]) -> str:
+        """Format strategic analysis for display."""
+        lines = []
+        
+        vendors = data.get('vendor_rankings', [])
+        if vendors:
+            lines.append("**Top Vendors by Reliability:**")
+            for i, v in enumerate(vendors[:3], 1):
+                lines.append(f"  {i}. {v.get('name', 'Unknown')} - Score: {v.get('score', 0):.0f}/100")
+            lines.append("")
+        
+        forecasts = data.get('cash_flow_forecasts', [])
+        if forecasts:
+            lines.append("**Cash Flow Outlook:**")
+            for f in forecasts[:3]:
+                emoji = "📈" if f.get('net_cash_flow', 0) > 0 else "📉"
+                lines.append(f"  {emoji} {f.get('period', 'Unknown')}: ₹{f.get('net_cash_flow', 0):,.0f}")
+        
+        if not lines:
+            lines.append("Strategic analysis data not available for current dataset.")
+        
+        return "\n".join(lines)
+    
+    def _format_recommendations(self, recommendations: List[str]) -> str:
+        """Format recommendations for display."""
+        if not recommendations:
+            return "No specific recommendations at this time."
+        
+        lines = []
+        rec_num = 0
+        for rec in recommendations:
+            if rec.startswith("   →"):
+                # This is an action item, indent it
+                lines.append(rec)
+            else:
+                # This is a main recommendation
+                rec_num += 1
+                lines.append(f"\n**{rec_num}.** {rec}")
+        
+        return "\n".join(lines)
+    
     def _handle_data_query(self, query: Optional[str]) -> str:
         """Handle query about user's data."""
         
@@ -466,10 +886,19 @@ class AgentWorkflow:
         
         try:
             # Use specialized SQL generation (uses sqlcoder if available)
-            sql = self.llm.generate_sql(query, schema_info)
+            # Returns tuple: (sql_string, is_valid)
+            sql_result = self.llm.generate_sql(query, schema_info)
+            
+            # Handle both old (string) and new (tuple) return formats
+            if isinstance(sql_result, tuple):
+                sql, is_valid = sql_result
+                if not is_valid:
+                    return "❌ Could not generate a safe query. Please rephrase your question."
+            else:
+                sql = sql_result  # Legacy compatibility
             
             # Validate and execute
-            if sql.upper().startswith("SELECT"):
+            if sql and sql.upper().startswith("SELECT"):
                 try:
                     result = self.data_engine.query(sql)
                     
@@ -553,9 +982,17 @@ Return ONLY the corrected SQL query."""
         
         try:
             # Use SQL model for fixing too
-            fixed_sql = self.llm.generate_sql(fix_prompt, schema_info)
+            sql_result = self.llm.generate_sql(fix_prompt, schema_info)
             
-            if fixed_sql.upper().startswith("SELECT") and fixed_sql != original_sql:
+            # Handle both old (string) and new (tuple) return formats
+            if isinstance(sql_result, tuple):
+                fixed_sql, is_valid = sql_result
+                if not is_valid:
+                    return None
+            else:
+                fixed_sql = sql_result  # Legacy compatibility
+            
+            if fixed_sql and fixed_sql.upper().startswith("SELECT") and fixed_sql != original_sql:
                 result = self.data_engine.query(fixed_sql)
                 if len(result) > 0:
                     return f"**Query:** `{fixed_sql}`\n\n**Results ({len(result)} rows):**\n```\n{result.to_string(index=False)}\n```"
@@ -764,6 +1201,11 @@ Data folder: `{data_path}`
 **📊 Strategic Analysis**  
 - `analyze vendors` - Get vendor reliability rankings
 - `forecast cash flow` - Get cash flow predictions
+
+**🔄 Multi-Step Analysis** *(NEW!)*
+- `full analysis` - Complete analysis with recommendations
+- `generate report` - Comprehensive business health report
+- `comprehensive review` - Analyze → Check → Recommend → Report
 
 **🔄 Company Management**
 - `switch company` - Change to a different company

@@ -29,7 +29,8 @@ pdfplumber>=0.10.0         # Advanced PDF parsing
 # =============================================================================
 # Agent Framework
 # =============================================================================
-langgraph>=0.0.40          # Agent orchestration
+langgraph>=1.0.0           # Agent orchestration (LangGraph)
+langchain-core>=0.3.0      # Core LangChain abstractions
 
 # =============================================================================
 # API Framework
