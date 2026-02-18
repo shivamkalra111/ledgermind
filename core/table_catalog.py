@@ -13,10 +13,12 @@ Benefits:
 """
 
 import json
+import re
 from pathlib import Path
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional, Any, Tuple
 from dataclasses import dataclass, field, asdict
 from datetime import datetime
+import numpy as np
 
 
 @dataclass
@@ -156,6 +158,41 @@ class TableMetadata:
         
         lines.append(f"  Total rows: {self.row_count}")
         return "\n".join(lines)
+    
+    def get_compressed_schema(self) -> str:
+        """
+        Ultra-brief schema for massive scale (20+ tables).
+        
+        Only column names and types, no descriptions or samples.
+        Reduces from ~750 chars to ~100 chars per table!
+        
+        Example:
+            purchase_2021_07(date DATE, vendor VARCHAR, amount DOUBLE, total DOUBLE)
+        """
+        columns_str = ", ".join([
+            f"{col['name']} {col['type']}" 
+            for col in self.columns
+        ])
+        
+        return f"{self.table_name}({columns_str})"
+    
+    def get_medium_schema(self) -> str:
+        """
+        Medium detail schema: column names, types, and descriptions only.
+        No samples or statistics. Reduces from ~750 to ~300 chars per table.
+        """
+        lines = [f"TABLE: {self.table_name}"]
+        lines.append(f"  Description: {self.description}")
+        lines.append("  Columns:")
+        
+        for col in self.columns:
+            desc = col.get('description', '')
+            if desc:
+                lines.append(f"    - {col['name']} ({col['type']}): {desc}")
+            else:
+                lines.append(f"    - {col['name']} ({col['type']})")
+        
+        return "\n".join(lines)
 
 
 class TableCatalog:
@@ -184,6 +221,11 @@ class TableCatalog:
         """
         self.workspace_path = Path(workspace_path) if workspace_path else None
         self.tables: Dict[str, TableMetadata] = {}
+        
+        # Vector search components (initialized on demand)
+        self.embeddings: Dict[str, np.ndarray] = {}
+        self.embedding_model = None
+        self._vector_search_enabled = False
         
         if self.workspace_path:
             self.catalog_path = self.workspace_path / "table_catalog.json"
@@ -264,12 +306,40 @@ class TableCatalog:
         
         return "\n".join(lines)
     
-    def get_schema_for_tables(self, table_names: List[str], include_samples: bool = True) -> str:
-        """Get full schema for specific tables (for SQL model)."""
+    def get_schema_for_tables(
+        self, 
+        table_names: List[str], 
+        include_samples: bool = True,
+        detail_level: str = "full"
+    ) -> str:
+        """
+        Get schema for specific tables with configurable detail level.
+        
+        This is critical for handling large numbers of tables!
+        
+        Args:
+            table_names: List of table names
+            include_samples: Include sample data (only for "full" level)
+            detail_level: One of "compressed", "medium", "full"
+                - "compressed": Just column names/types (~100 chars/table)
+                - "medium": + descriptions (~300 chars/table)  
+                - "full": + samples + stats (~750 chars/table)
+        
+        Returns:
+            Schema string for all tables
+        """
         schemas = []
+        
         for name in table_names:
             if name in self.tables:
-                schemas.append(self.tables[name].get_full_schema(include_samples))
+                meta = self.tables[name]
+                
+                if detail_level == "compressed":
+                    schemas.append(meta.get_compressed_schema())
+                elif detail_level == "medium":
+                    schemas.append(meta.get_medium_schema())
+                else:  # "full"
+                    schemas.append(meta.get_full_schema(include_samples))
         
         return "\n\n".join(schemas)
     
@@ -369,6 +439,278 @@ SELECTED TABLES:"""
         except Exception as e:
             # Fallback to keyword matching
             return self._fallback_selection(query, max_tables)
+    
+    def initialize_vector_search(self, force: bool = False):
+        """
+        Initialize vector search for massive scale (100+ tables).
+        
+        This is optional and only needed for large datasets.
+        Uses sentence-transformers (lightweight, CPU-friendly).
+        
+        Args:
+            force: Force re-generation of embeddings even if already exist
+        """
+        if self._vector_search_enabled and not force:
+            print("✓ Vector search already enabled")
+            return
+        
+        if not self.tables:
+            print("⚠ No tables to embed")
+            return
+        
+        print(f"🔍 Initializing vector search for {len(self.tables)} tables...")
+        
+        try:
+            from sentence_transformers import SentenceTransformer
+            
+            # Load lightweight embedding model (80MB, runs on CPU)
+            if self.embedding_model is None:
+                print("  Loading embedding model (all-MiniLM-L6-v2)...")
+                self.embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
+            
+            # Generate embeddings for each table
+            print("  Generating embeddings...")
+            for i, (table_name, metadata) in enumerate(self.tables.items(), 1):
+                if table_name not in self.embeddings or force:
+                    # Create rich text representation
+                    text = self._create_embedding_text(metadata)
+                    
+                    # Generate embedding
+                    embedding = self.embedding_model.encode(text, show_progress_bar=False)
+                    self.embeddings[table_name] = embedding
+                
+                if i % 10 == 0:
+                    print(f"    Progress: {i}/{len(self.tables)}")
+            
+            self._vector_search_enabled = True
+            print(f"✓ Vector search ready ({len(self.embeddings)} tables embedded)")
+            
+        except ImportError:
+            print("⚠ sentence-transformers not installed. Run: pip install sentence-transformers")
+            print("  Falling back to standard LLM selection")
+        except Exception as e:
+            print(f"⚠ Failed to initialize vector search: {e}")
+            print("  Falling back to standard LLM selection")
+    
+    def _create_embedding_text(self, metadata: TableMetadata) -> str:
+        """
+        Create rich text representation for embedding.
+        
+        Includes table name, description, column names, keywords, and sample values.
+        This enables semantic matching (e.g., 'vendor' matches 'supplier').
+        """
+        parts = [
+            f"Table: {metadata.table_name}",
+            f"Description: {metadata.description}",
+            f"Columns: {', '.join(metadata.get_column_names())}",
+        ]
+        
+        # Add keywords
+        if metadata.keywords:
+            parts.append(f"Keywords: {', '.join(metadata.keywords)}")
+        
+        # Add date range if available
+        if metadata.date_range:
+            dr = metadata.date_range
+            parts.append(f"Period: {dr.get('period_description', '')}")
+        
+        # Add sample values (helps with semantic matching)
+        if metadata.sample_rows:
+            first_row = metadata.sample_rows[0]
+            sample_str = ", ".join([f"{k}={v}" for k, v in list(first_row.items())[:5]])
+            parts.append(f"Sample: {sample_str[:100]}")
+        
+        return " | ".join(parts)
+    
+    def search_tables_by_vector(
+        self, 
+        query: str, 
+        top_k: int = 20
+    ) -> List[Tuple[str, float]]:
+        """
+        Vector search for relevant tables (massive scale optimization).
+        
+        Returns top K most semantically similar tables without using any tokens!
+        
+        Args:
+            query: User's natural language question
+            top_k: Number of candidate tables to return
+            
+        Returns:
+            List of (table_name, similarity_score) tuples, sorted by relevance
+        """
+        if not self._vector_search_enabled:
+            raise RuntimeError(
+                "Vector search not initialized. Call initialize_vector_search() first."
+            )
+        
+        if not self.embeddings:
+            return []
+        
+        # Embed the query
+        query_embedding = self.embedding_model.encode(query, show_progress_bar=False)
+        
+        # Compute cosine similarity with all tables
+        similarities = []
+        for table_name, table_embedding in self.embeddings.items():
+            similarity = self._cosine_similarity(query_embedding, table_embedding)
+            similarities.append((table_name, float(similarity)))
+        
+        # Sort by similarity (highest first)
+        similarities.sort(key=lambda x: x[1], reverse=True)
+        
+        return similarities[:top_k]
+    
+    def _cosine_similarity(self, vec1: np.ndarray, vec2: np.ndarray) -> float:
+        """Compute cosine similarity between two vectors."""
+        return np.dot(vec1, vec2) / (np.linalg.norm(vec1) * np.linalg.norm(vec2))
+    
+    def select_tables_for_massive_scale(
+        self, 
+        query: str, 
+        llm_client, 
+        max_final_tables: int = 5
+    ) -> List[str]:
+        """
+        Three-stage selection for massive scale (100+ tables).
+        
+        This solves the context limit problem:
+        - Stage 1: Vector search (500 tables → 20 candidates, 0 tokens!)
+        - Stage 2: Family expansion (smart pattern detection)
+        - Stage 3: LLM refinement (20 candidates → 5 final, ~500 tokens)
+        
+        Total token usage: ~500 tokens vs 12,500 for full catalog!
+        
+        Args:
+            query: User's natural language question
+            llm_client: LLM client for final refinement
+            max_final_tables: Maximum tables in final selection
+            
+        Returns:
+            List of selected table names
+        """
+        if not self._vector_search_enabled:
+            # Fallback to standard selection
+            print("⚠ Vector search not enabled, using standard selection")
+            return self.select_tables_with_llm(query, llm_client, max_tables=max_final_tables)
+        
+        print(f"\n🔍 MASSIVE SCALE SELECTION (from {len(self.tables)} tables)")
+        
+        # ═══════════════════════════════════════════════════════════
+        # STAGE 1: VECTOR SEARCH (semantic similarity, 0 tokens)
+        # ═══════════════════════════════════════════════════════════
+        
+        print(f"  Stage 1: Vector search...")
+        candidates = self.search_tables_by_vector(query, top_k=20)
+        candidate_names = [name for name, score in candidates]
+        
+        print(f"    ✓ Found {len(candidate_names)} candidates")
+        for name, score in candidates[:3]:
+            print(f"      - {name} (similarity: {score:.3f})")
+        
+        # ═══════════════════════════════════════════════════════════
+        # STAGE 2: FAMILY EXPANSION (pattern matching, 0 tokens)
+        # ═══════════════════════════════════════════════════════════
+        
+        print(f"  Stage 2: Family detection...")
+        
+        query_lower = query.lower()
+        wants_all = any(kw in query_lower for kw in [
+            "all ", "total", "entire", "complete", "sum of all", "overall"
+        ])
+        
+        if wants_all:
+            # Expand to include full families
+            expanded = self._expand_to_families(candidate_names)
+            print(f"    ✓ Expanded to {len(expanded)} tables (families included)")
+            candidate_names = expanded
+        
+        # ═══════════════════════════════════════════════════════════
+        # STAGE 3: LLM REFINEMENT (20 candidates → final selection)
+        # ═══════════════════════════════════════════════════════════
+        
+        print(f"  Stage 3: LLM refinement...")
+        
+        # Build catalog for ONLY the candidates (not all 500 tables!)
+        candidate_catalog = self._build_candidate_catalog(candidate_names)
+        
+        # Token usage: 20 candidates × 100 chars = 2,000 chars (~500 tokens)
+        # This fits easily in context!
+        
+        prompt = f"""Select the most relevant tables for this question.
+
+USER QUESTION: {query}
+
+CANDIDATE TABLES (pre-filtered by semantic search):
+{candidate_catalog}
+
+RULES:
+1. Select tables needed to answer the question
+2. Return ONLY table names, comma-separated
+3. Maximum {max_final_tables} tables (unless aggregate "all" query)
+
+SELECTED TABLES:"""
+
+        try:
+            response = llm_client.generate(prompt, max_tokens=200)
+            
+            # Parse table names from response
+            selected = []
+            response_lower = response.lower().strip()
+            
+            for table_name in candidate_names:
+                if table_name.lower() in response_lower:
+                    selected.append(table_name)
+            
+            # Fallback: use top candidates from vector search
+            if not selected:
+                selected = candidate_names[:max_final_tables]
+            
+            # Limit to max tables (unless wants_all)
+            if not wants_all:
+                selected = selected[:max_final_tables]
+            
+            print(f"    ✓ Final selection: {len(selected)} tables")
+            for name in selected:
+                print(f"      - {name}")
+            
+            return selected
+            
+        except Exception as e:
+            print(f"  ⚠ LLM refinement failed: {e}")
+            # Fallback to top candidates from vector search
+            return candidate_names[:max_final_tables]
+    
+    def _expand_to_families(self, candidate_names: List[str]) -> List[str]:
+        """
+        Expand candidate tables to include full families.
+        
+        Example:
+            Input: ["purchase_2021_07", "purchase_2021_12"]
+            Output: All 12 months of purchase_2021_*
+        """
+        families = self._detect_table_families()
+        expanded = set(candidate_names)
+        
+        for candidate in candidate_names:
+            # Find which family this belongs to
+            for family_prefix, family_tables in families.items():
+                if candidate in family_tables:
+                    # Add all tables from this family
+                    expanded.update(family_tables)
+                    break
+        
+        return list(expanded)
+    
+    def _build_candidate_catalog(self, candidate_names: List[str]) -> str:
+        """Build brief catalog for ONLY the candidate tables."""
+        lines = []
+        for i, name in enumerate(candidate_names, 1):
+            if name in self.tables:
+                meta = self.tables[name]
+                lines.append(f"{i}. {name} - {meta.get_brief_description()}")
+        
+        return "\n".join(lines)
     
     def _detect_table_families(self) -> Dict[str, List[str]]:
         """

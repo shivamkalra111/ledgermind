@@ -273,7 +273,7 @@ class AgentGraph:
         return route_map.get(intent, "unknown")
     
     def _handle_data_query(self, state: AnalysisState) -> Dict[str, Any]:
-        """Handle a data query."""
+        """Handle a data query with automatic scale detection."""
         
         query = state.get("extracted_query") or state["user_input"]
         
@@ -288,17 +288,71 @@ class AgentGraph:
                     "steps_completed": state["steps_completed"] + ["handle_data_query"]
                 }
             
-            # Build schema
-            schema_parts = []
-            for table in tables[:5]:
-                try:
-                    cols = self.data_engine.query(f"DESCRIBE {table}")
-                    col_list = cols['column_name'].tolist()
-                    schema_parts.append(f"TABLE: {table}\n  Columns: {', '.join(col_list)}")
-                except:
-                    pass
+            # ═══════════════════════════════════════════════════════════
+            # SMART TABLE SELECTION with automatic scale detection
+            # ═══════════════════════════════════════════════════════════
             
-            schema = "\n".join(schema_parts)
+            num_tables = len(tables)
+            
+            # Get table catalog for smart selection
+            catalog = self.data_engine.get_catalog()
+            
+            if catalog and len(catalog.tables) > 0:
+                print(f"\n📊 Using smart table selection ({num_tables} tables available)")
+                
+                # AUTOMATIC SCALE DETECTION
+                if num_tables > 100 and not catalog._vector_search_enabled:
+                    print("⚡ Massive scale detected - initializing vector search...")
+                    catalog.initialize_vector_search()
+                
+                # Select relevant tables based on scale
+                if num_tables > 100:
+                    # Use massive-scale selection (vector + LLM)
+                    relevant_tables = catalog.select_tables_for_massive_scale(
+                        query, 
+                        self.llm,
+                        max_final_tables=5
+                    )
+                else:
+                    # Use standard LLM selection (works well up to 100 tables)
+                    relevant_tables = catalog.select_tables_with_llm(
+                        query, 
+                        self.llm, 
+                        max_tables=3
+                    )
+                
+                # Adaptive schema detail based on number of selected tables
+                if len(relevant_tables) > 10:
+                    # Use compressed schema to fit in context
+                    detail_level = "compressed"
+                    print(f"  Using compressed schema ({len(relevant_tables)} tables)")
+                elif len(relevant_tables) > 5:
+                    # Use medium detail
+                    detail_level = "medium"
+                    print(f"  Using medium schema ({len(relevant_tables)} tables)")
+                else:
+                    # Use full detail
+                    detail_level = "full"
+                    print(f"  Using full schema ({len(relevant_tables)} tables)")
+                
+                schema = catalog.get_schema_for_tables(
+                    relevant_tables, 
+                    detail_level=detail_level
+                )
+                
+            else:
+                # Fallback: no catalog, use old method (first 5 tables)
+                print(f"⚠️ No catalog available, using first 5 tables")
+                schema_parts = []
+                for table in tables[:5]:
+                    try:
+                        cols = self.data_engine.query(f"DESCRIBE {table}")
+                        col_list = cols['column_name'].tolist()
+                        schema_parts.append(f"TABLE: {table}\n  Columns: {', '.join(col_list)}")
+                    except:
+                        pass
+                
+                schema = "\n".join(schema_parts)
             
             # Generate SQL (returns tuple: sql_string, is_valid)
             sql_result = self.llm.generate_sql(query, schema)

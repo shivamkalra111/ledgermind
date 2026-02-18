@@ -13,10 +13,20 @@ from config import DUCKDB_PATH, WORKSPACE_DIR, SDM_TABLES
 class DataEngine:
     """DuckDB-based data engine for financial data analysis."""
     
-    def __init__(self, db_path: Path = DUCKDB_PATH):
+    def __init__(self, db_path: Path = DUCKDB_PATH, workspace_path: Optional[Path] = None):
         self.db_path = db_path
         self.conn = duckdb.connect(str(db_path))
         self._init_extensions()
+        
+        # Initialize table catalog for smart selection
+        self.catalog = None
+        if workspace_path:
+            from core.table_catalog import TableCatalog
+            self.catalog = TableCatalog(workspace_path)
+    
+    def get_catalog(self):
+        """Get the table catalog for smart table selection."""
+        return self.catalog
         
     def _init_extensions(self):
         """Initialize DuckDB extensions for Excel support."""
